@@ -87,8 +87,12 @@ if (only < 0) {
   for (const locale of SUPPORTED) if (!present.includes(locale)) { console.error(`missing catalog ${locale}.json`); failed = true; }
   for (const locale of present) if (!SUPPORTED.includes(locale)) { console.error(`unknown catalog ${locale}.json (not a Hermes dashboard locale)`); failed = true; }
 }
+if (only > 0 && (!locales[0] || !SUPPORTED.includes(locales[0]))) {
+  console.error(`--only needs a Hermes dashboard locale (${SUPPORTED.join(", ")}), got ${JSON.stringify(locales[0] || "")}`);
+  process.exit(1);
+}
 for (const locale of locales) {
-  if (!fs.existsSync(new URL(`${locale}.json`, dir))) continue;
+  if (!fs.existsSync(new URL(`${locale}.json`, dir))) { console.error(`${locale}: catalog ${locale}.json not found`); failed = true; continue; }
   const result = check(locale);
   const ok = result.length === 1 && result[0].startsWith("ok");
   if (!ok) failed = true;

@@ -19,18 +19,18 @@
   /* i18n:end */
 
   const SUPPORTED = Object.keys(MESSAGES);
+  const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
   const RTL = { ar: true };
   const NUMBERS = { ar: "latn" };
   function localeName(value) {
     const raw = String(value || "").toLowerCase().replace(/_/g, "-");
     if (!raw) return "en";
-    if (raw === "zh-hant" || /^zh-(tw|hk|mo)/.test(raw) || raw.startsWith("zh-hant")) return MESSAGES["zh-hant"] ? "zh-hant" : "zh";
-    if (MESSAGES[raw]) return raw;
+    if (raw === "zh-hant" || /^zh-(tw|hk|mo)/.test(raw) || raw.startsWith("zh-hant")) return has(MESSAGES, "zh-hant") ? "zh-hant" : "zh";
+    if (has(MESSAGES, raw)) return raw;
     const base = raw.split("-")[0];
-    if (base === "pt" && MESSAGES.pt) return "pt";
-    return MESSAGES[base] ? base : "en";
+    return has(MESSAGES, base) ? base : "en";
   }
-  function intlLocale(locale) { return NUMBERS[locale] ? locale + "-u-nu-" + NUMBERS[locale] : locale; }
+  function intlLocale(locale) { return has(NUMBERS, locale) ? locale + "-u-nu-" + NUMBERS[locale] : locale; }
   function storedLocale() { try { return window.localStorage.getItem("hermes-locale") || ""; } catch (_) { return ""; } }
   function hostLocale() {
     const i18n = SDK.useI18n ? SDK.useI18n() : null;
@@ -49,13 +49,14 @@
     return localeName(fromHost || fallback);
   }
   function lookup(locale, key) {
-    const walk = (catalog) => { let value = catalog; for (const part of key.split(".")) value = value && value[part]; return value; };
-    const value = walk(MESSAGES[locale]);
+    const walk = (catalog) => { let value = catalog; for (const part of key.split(".")) value = value && typeof value === "object" && has(value, part) ? value[part] : undefined; return value; };
+    const value = walk(has(MESSAGES, locale) ? MESSAGES[locale] : MESSAGES.en);
     return value != null ? value : walk(MESSAGES.en);
   }
-  const pluralCache = {};
+  const pluralCache = new Map();
   function pluralCategory(locale, n) {
-    const rules = pluralCache[locale] || (pluralCache[locale] = new Intl.PluralRules(locale));
+    if (!pluralCache.has(locale)) pluralCache.set(locale, new Intl.PluralRules(locale));
+    const rules = pluralCache.get(locale);
     return rules.select(Number(n) || 0);
   }
   function fill(text, vars) {
@@ -93,12 +94,13 @@
     if (last < value.length) out.push(value.slice(last));
     return out;
   }
-  const numCache = {};
+  const numCache = new Map();
   function num(n, locale) {
-    const f = numCache[locale] || (numCache[locale] = new Intl.NumberFormat(intlLocale(locale)));
+    if (!numCache.has(locale)) numCache.set(locale, new Intl.NumberFormat(intlLocale(locale)));
+    const f = numCache.get(locale);
     return f.format(n);
   }
-  const durCache = {};
+  const durCache = new Map();
   function durationParts(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
     if (sec < 60) return { seconds: sec };
@@ -112,8 +114,10 @@
   function dur(sec, locale) {
     const parts = durationParts(sec);
     if (typeof Intl.DurationFormat === "function") {
-      const f = durCache[locale] || (durCache[locale] = new Intl.DurationFormat(intlLocale(locale), { style: "short" }));
-      return f.format(parts);
+      // A zero duration formats to "" unless the unit is forced, so force seconds only in that case.
+      const zero = !Object.values(parts).some(Boolean), cacheKey = zero ? locale + "|0" : locale;
+      if (!durCache.has(cacheKey)) durCache.set(cacheKey, new Intl.DurationFormat(intlLocale(locale), zero ? { style: "short", secondsDisplay: "always" } : { style: "short" }));
+      return durCache.get(cacheKey).format(parts);
     }
     // Fallback for engines without Intl.DurationFormat: unit-formatted numbers joined by the locale's list format.
     const units = { days: "day", hours: "hour", minutes: "minute", seconds: "second" };
@@ -157,8 +161,10 @@
   }
   function platformName(locale, name) { const v = lookup(locale, "platform." + name); return typeof v === "string" ? v : name; }
   function issueText(locale, issue) {
-    const section = lookup(locale, issue.section) || lookup(locale, "section." + issue.section);
-    return tr(locale, "issue." + issue.code, { section: typeof section === "string" ? section : issue.section, detail: issue.detail || "" });
+    // Prefer the dedicated section label; some section names (gateway) are also message groups.
+    const pick = (v) => (typeof v === "string" ? v : null);
+    const section = pick(lookup(locale, "section." + issue.section)) || pick(lookup(locale, issue.section)) || issue.section;
+    return tr(locale, "issue." + issue.code, { section, detail: issue.detail || "" });
   }
   function listJoin(locale, items) { if (items.length < 2) return items.join(""); return Intl.ListFormat ? new Intl.ListFormat(locale, { type: "unit", style: "short" }).format(items) : items.join(", "); }
   const scrollTo = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
@@ -231,6 +237,9 @@
   function DoneList(props) { const { items, now, locale, t } = props; return h(Section, { locale, id: "db-done", title: t("recentDone"), count: items.length, hint: t("recentDoneHint") }, items.length === 0 ? h(Empty, null, t("none")) : h(More, { items, limit: 6, t, render: (s) => h("div", { key: s.session_id, className: "db-item db-line" }, h("div", { className: "db-line-main" }, h("div", { className: "db-line-meta" }, h(Title, { s, locale, t }), h(Place, { s, t }), s.promised ? h(Chip, { tone: "warn" }, t("promised")) : null), h("div", { className: "db-sub" }, s.reply_tail)), h("span", { className: "db-time" }, rel(now - s.since, locale))) })); }
   function GoalList(props) { const { g, locale, t } = props; if (!g.items.length && !g.stale) return null; return h(Section, { locale, id: "db-goals", title: t("goals"), count: g.items.length, hint: g.stale ? t("staleGoals", { count: g.stale }) : null }, g.items.length === 0 ? h(Empty, null, t("noGoals")) : g.items.map((x, i) => h("div", { key: i, className: "db-item db-line" }, h("div", { className: "db-line-main" }, h("div", { className: "db-line-title" }, x.goal), h("div", { className: "db-line-meta" }, h(Title, { s: x.session, locale, t }), h("span", null, (x.max_turns ? t("progress", { turns: x.turns || 0, count: x.max_turns }) : String(x.turns || 0)))), x.reason ? h("div", { className: "db-sub" }, x.reason) : null), h(Chip, { tone: x.status === "active" ? "live" : "warn" }, x.status === "active" ? t("active") : t("paused"))))); }
   function GatewayChips(props) { const g = props.g || {}, locale = props.locale, known = { connected: 1, retrying: 1, disconnected: 1, error: 1 }; return h("div", { className: "db-gw" }, (g.platforms || []).map((p) => h("span", { key: p.name, className: "db-gw-item", title: p.error || "" }, h("span", { className: "db-gw-dot db-gw-dot--" + (p.state === "connected" ? "ok" : "bad") }), h("bdi", null, platformName(locale, p.name)), " " + tr(locale, "gateway." + (known[p.state] ? p.state : "error"))))); }
+  // Test-only handle on the pure i18n helpers (tests/js/runtime_check.mjs). Not used by the UI.
+  window.__DUTY_BOARD_I18N__ = { localeName, tr, num, dur, issueText };
+
   function WarningBanner(props) { const issues = props.issues && props.issues.length ? props.issues.map((x) => issueText(props.locale, x)) : (props.warnings || []); if (!issues.length) return null; return h("div", { className: "db-warning", role: "status" }, h("strong", null, props.t("warnings")), h("ul", null, issues.map((text, i) => h("li", { key: i }, h("bdi", null, text))))); }
 
   function DutyBoard() {
@@ -238,7 +247,7 @@
     const setOpenMode = (value) => { const mode = value === "browser" ? "browser" : "app"; setOpenIn(mode); try { window.localStorage.setItem("duty-board:open-in", mode); } catch (_) {} };
     const onDismiss = useCallback((key) => { setLeaving((m) => Object.assign({}, m, { [key]: true })); setTimeout(() => { SDK.fetchJSON(API + "/dismiss", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) }).then(reload).catch(() => setLeaving((m) => { const next = Object.assign({}, m); delete next[key]; return next; })); }, 220); }, [reload]);
     const age = okAt ? now - okAt : null, stale = error || (age != null && age > 20);
-    return h("div", { className: "duty-board", lang: locale, dir: RTL[locale] ? "rtl" : "ltr" }, h("header", { className: "db-head" }, h("div", null, h("h1", { className: "db-h1" }, t("appTitle")), h("div", { className: "db-head-sub" }, t("appSubtitle"))), h("div", { className: "db-head-right" }, h("label", { className: "db-open-mode" }, t("openIn"), h("select", { value: openIn, onChange: (event) => setOpenMode(event.target.value), "aria-label": t("openIn") }, h("option", { value: "app" }, t("discordApp")), h("option", { value: "browser" }, t("browser")))), data ? h(GatewayChips, { g: data.gateway, locale }) : null, h("span", { className: "db-live" + (stale ? " is-stale" : "") }, h("span", { className: "db-live-dot" }), stale ? (error ? t("loadFailed", { error }) : t("stale", { value: dur(age, locale) })) : (age != null ? (age < 2 ? t("justNow") : t("refreshed", { value: dur(age, locale) })) : t("loading"))))), !data ? h("div", { className: "db-loading" }, error ? t("loadFailed", { error }) : t("loading")) : h(React.Fragment, null, h(WarningBanner, { issues: data.issues, warnings: data.warnings, locale, t }), h(Kpis, { d: data, now, locale, t }), h("div", { className: "db-grid" }, h("div", { className: "db-col" }, h(WaitingList, { items: data.conversations.waiting, unanswered: data.conversations.unanswered, now, leaving, onDismiss, locale, openIn, t }), h(DoneList, { items: data.conversations.done, now, locale, t })), h("div", { className: "db-col" }, h(RunningList, { items: data.conversations.running, now, locale, openIn, t }), h(DelegationList, { d: data.delegations, now, leaving, onDismiss, locale, t }), h(CronList, { c: data.cron, now, locale, t }), h(GoalList, { g: data.goals, locale, t })))));
+    return h("div", { className: "duty-board", lang: locale, dir: has(RTL, locale) ? "rtl" : "ltr" }, h("header", { className: "db-head" }, h("div", null, h("h1", { className: "db-h1" }, t("appTitle")), h("div", { className: "db-head-sub" }, t("appSubtitle"))), h("div", { className: "db-head-right" }, h("label", { className: "db-open-mode" }, t("openIn"), h("select", { value: openIn, onChange: (event) => setOpenMode(event.target.value), "aria-label": t("openIn") }, h("option", { value: "app" }, t("discordApp")), h("option", { value: "browser" }, t("browser")))), data ? h(GatewayChips, { g: data.gateway, locale }) : null, h("span", { className: "db-live" + (stale ? " is-stale" : "") }, h("span", { className: "db-live-dot" }), stale ? (error ? t("loadFailed", { error }) : t("stale", { value: dur(age, locale) })) : (age != null ? (age < 2 ? t("justNow") : t("refreshed", { value: dur(age, locale) })) : t("loading"))))), !data ? h("div", { className: "db-loading" }, error ? t("loadFailed", { error }) : t("loading")) : h(React.Fragment, null, h(WarningBanner, { issues: data.issues, warnings: data.warnings, locale, t }), h(Kpis, { d: data, now, locale, t }), h("div", { className: "db-grid" }, h("div", { className: "db-col" }, h(WaitingList, { items: data.conversations.waiting, unanswered: data.conversations.unanswered, now, leaving, onDismiss, locale, openIn, t }), h(DoneList, { items: data.conversations.done, now, locale, t })), h("div", { className: "db-col" }, h(RunningList, { items: data.conversations.running, now, locale, openIn, t }), h(DelegationList, { d: data.delegations, now, leaving, onDismiss, locale, t }), h(CronList, { c: data.cron, now, locale, t }), h(GoalList, { g: data.goals, locale, t })))));
   }
 
   window.__HERMES_PLUGINS__.register("duty-board", DutyBoard);

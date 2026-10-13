@@ -20,6 +20,7 @@ ruff check .
 node --check dashboard/dist/index.js
 node tools/build_i18n.mjs --check
 node tests/js/i18n_check.mjs
+node tests/js/runtime_check.mjs
 (cd tests/js && npm install --no-package-lock) && node tests/js/render_check.mjs
 ```
 

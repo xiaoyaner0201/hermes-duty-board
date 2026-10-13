@@ -51,6 +51,8 @@ jobs:
         run: node tools/build_i18n.mjs --check
       - name: Catalogs complete (keys, placeholders, plural forms)
         run: node tests/js/i18n_check.mjs
+      - name: i18n runtime (locale resolution, plurals, numbers, durations)
+        run: node tests/js/runtime_check.mjs
       - name: Install React for the render check
         working-directory: tests/js
         run: npm install --no-audit --no-fund --no-package-lock
