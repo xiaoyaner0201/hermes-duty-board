@@ -3,7 +3,7 @@
   "label": "Duty Board",
   "description": "Live conversation, background job, and scheduled job status",
   "icon": "Activity",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "tab": {
     "path": "/duty",
     "position": "before:sessions"

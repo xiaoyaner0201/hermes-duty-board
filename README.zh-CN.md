@@ -38,7 +38,7 @@
 ## 运行要求
 
 - Hermes Agent **0.21.1 及以上**，并启用网页后台（`hermes dashboard`）。
-- Hermes 支持的消息平台都能用。跳转按钮目前只支持 Discord；其他平台的对话照样会显示，只是没有跳转按钮。
+- 默认覆盖 Discord、Telegram、Slack、WhatsApp、Signal、Matrix、Mattermost、飞书、钉钉、企业微信、微信、QQ、BlueBubbles、邮件和短信的会话，可用 `messaging_sources` 调整。跳转按钮目前只支持 Discord；其他平台的对话照样会显示，只是没有跳转按钮。
 
 ## 安装
 
@@ -79,6 +79,9 @@ hermes dashboard --stop && hermes dashboard
 | `unanswered_grace_seconds` | `180` | 你的最后一条消息多久没人回，就列进「你发了消息，但没有看到回复」。 |
 | `recent_done_hours` | `24` | 「最近完成」的时间范围。 |
 | `goal_lookback_days` | `14` | 超过这个天数的旧目标只计数，不展开列出。 |
+| `messaging_sources` | 见上文 | 要纳入的 Hermes 会话来源，例如 `["discord", "telegram"]`。 |
+
+**共享子区**：Hermes 默认一个子区共用一个会话，所以可能有好几个人在里面说话。如果 Hermes 记下了最新那条消息是谁发的，看板就把这个对话算给那个人；否则算给开这个子区的人。不管算给谁，看板从共享子区里显示的内容，子区里的每个人本来就都能看到。私聊和按人分开的群组会话不会混在一起。
 
 ## 怎么判断“在等你”
 

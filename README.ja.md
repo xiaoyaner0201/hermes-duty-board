@@ -38,7 +38,7 @@ Duty Board はこれらを 1 ページにまとめ、5 秒ごとに更新しま�
 ## 動作要件
 
 - Hermes Agent **0.21.1 以降**と Web ダッシュボード（`hermes dashboard`）。
-- Hermes が対応するメッセージングプラットフォームならどれでも使えます。ジャンプボタンは現在 Discord のみで、他のプラットフォームの会話はボタンなしで表示されます。
+- 既定では Discord、Telegram、Slack、WhatsApp、Signal、Matrix、Mattermost、Feishu、DingTalk、WeCom、Weixin、QQ、BlueBubbles、メール、SMS のセッションを対象にします（`messaging_sources` で変更可能）。ジャンプボタンは現在 Discord のみで、他のプラットフォームの会話はボタンなしで表示されます。
 
 ## インストール
 
@@ -79,6 +79,9 @@ hermes dashboard --stop && hermes dashboard
 | `unanswered_grace_seconds` | `180` | あなたの最後のメッセージに何秒返信がなければ「あなたが送信しましたが返信がありません」に入れるか。 |
 | `recent_done_hours` | `24` | 「最近完了」の対象時間。 |
 | `goal_lookback_days` | `14` | これより古いゴールは件数だけを表示します。 |
+| `messaging_sources` | 上記参照 | 対象にする Hermes のセッションソース。例：`["discord", "telegram"]`。 |
+
+**共有スレッドについて**：Hermes は既定でスレッドごとに 1 つのセッションを共有するため、複数の人が同じスレッドで話すことがあります。最新のメッセージの送信者を Hermes が記録していればその人の会話として扱い、記録がなければスレッドを始めた人の会話として扱います。どちらの場合も、共有スレッドから表示される内容はそのスレッドの参加者全員がもともと見られるものです。DM とユーザーごとのグループセッションが混ざることはありません。
 
 ## 「あなたの返信待ち」の判定方法
 

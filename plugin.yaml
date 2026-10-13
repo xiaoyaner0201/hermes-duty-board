@@ -1,5 +1,5 @@
 name: duty-board
-version: 0.2.0
+version: 0.2.1
 description: "Live dashboard tab: conversations waiting on your reply, turns running now, background jobs and cron health, with one-click Open in Discord. Read-only; registers no tools or hooks."
 author: xiaoyaner0201
 requires_hermes: ">=0.21.1"

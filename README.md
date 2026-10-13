@@ -38,7 +38,7 @@ Duty Board puts all of it on one page that refreshes every five seconds. Each co
 ## Requirements
 
 - Hermes Agent **0.21.1 or newer** with the web dashboard (`hermes dashboard`).
-- Works with any messaging platform Hermes supports. Deep links are Discord-only for now; other platforms show their conversations without a jump button.
+- Covers Discord, Telegram, Slack, WhatsApp, Signal, Matrix, Mattermost, Feishu, DingTalk, WeCom, Weixin, QQ, BlueBubbles, email and SMS sessions by default (`messaging_sources` changes the list). Jump buttons are Discord-only for now; other platforms show their conversations without one.
 
 ## Install
 
@@ -79,6 +79,9 @@ Everything is optional. To change the defaults, create `~/.hermes/duty-board/set
 | `unanswered_grace_seconds` | `180` | How long your last message can go unanswered before it is listed as *You wrote, but no reply arrived*. |
 | `recent_done_hours` | `24` | Window for *Recently completed*. |
 | `goal_lookback_days` | `14` | Older goals are counted, not listed. |
+| `messaging_sources` | see above | Hermes session sources to include, e.g. `["discord", "telegram"]`. |
+
+**Shared threads.** Hermes shares one session per thread by default, so several people can talk in it. When Hermes recorded who sent the latest message, the board attributes the conversation to that person. Otherwise it attributes it to whoever started the thread. Either way, everything shown from a shared thread is already visible to everyone in that thread. Direct messages and per-user group sessions are never mixed.
 
 ## How "waiting on you" is decided
 
