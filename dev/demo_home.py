@@ -87,13 +87,13 @@ def build(path: Path) -> Path:
     ], channel="#admin")
     convo(6, "Refactor the auth middleware", [
         ("user", "Split the auth middleware into token and session parts, with tests.", 38 * 60),
-    ], lease=38 * 60, activity=("tool: terminal", 40), channel="#work")
+    ], lease=38 * 60, activity=("tool running: terminal", 40), channel="#work")
     convo(7, "Summarise this week's support tickets", [
         ("user", "Summarise this week's support tickets by theme.", 12 * 60),
-    ], lease=12 * 60, activity=("waiting for model response", 8), channel="#support")
+    ], lease=12 * 60, activity=("receiving stream response", 8), channel="#support")
     convo(8, "Back up the photo library", [
         ("user", "Back up the photo library to the NAS and verify checksums.", 21 * 60),
-    ], lease=21 * 60, activity=("tool: terminal", 14 * 60), channel="#home")
+    ], lease=21 * 60, activity=("terminal command running (840s elapsed)", 14 * 60), channel="#home")
     convo(9, "Draft the release notes", [
         ("user", "Draft release notes for v2.4 from the merged PRs.", 6 * h),
         ("assistant", "Release notes are in docs/releases/2.4.md: 3 features, 11 fixes, 1 breaking change, "
@@ -105,7 +105,7 @@ def build(path: Path) -> Path:
     ], channel="#work")
     convo(11, "Book club notes", [
         ("user", "Can you summarise chapter 4 for tonight?", 30 * 60),
-    ], user="200000000000000002", name="Alex", lease=30 * 60, activity=("waiting for model response", 20),
+    ], user="200000000000000002", name="Alex", lease=30 * 60, activity=("waiting for provider response", 20),
           channel="#books")
 
     conn = sqlite3.connect(home / "state.db")
