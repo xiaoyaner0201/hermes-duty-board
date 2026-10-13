@@ -5,7 +5,7 @@ Hermes dashboard login.  It is safe for local screenshots when pointed at a
 synthetic home:
 
 ```bash
-python tests/fixtures/make_home.py
+python tests/fixtures/make_home.py /tmp/duty-board-home
 python dev/harness/serve.py --fixture /tmp/duty-board-home --port 9188
 ```
 
