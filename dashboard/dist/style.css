@@ -140,3 +140,12 @@ a.db-title:hover .db-title-arrow { opacity: .8; }
 .db-more-inner { overflow: hidden; min-height: 0; }
 .db-more { display: block; width: 100%; margin: 6px 0 4px; padding: 6px 0; font-size: .78rem; color: var(--db-muted); background: transparent; border: 1px dashed var(--db-line); border-radius: 6px; cursor: pointer; transition: color .2s, border-color .2s; }
 .db-more:hover { color: var(--color-foreground); border-color: color-mix(in srgb, var(--color-foreground) 30%, var(--db-line)); }
+
+/* Discord jump actions */
+.db-link-actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.db-primary { font: inherit; font-size: .75rem; background: var(--db-accent); color: var(--color-primary-foreground); border: 1px solid var(--db-accent); border-radius: 6px; padding: 5px 8px; cursor: pointer; }
+.db-web { font-size: .75rem; color: var(--db-muted); }
+.db-open-mode { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--db-muted); }
+.db-open-mode select { color: var(--color-foreground); background: var(--color-card); border: 1px solid var(--db-line); border-radius: 6px; padding: 4px; }
+.duty-board button:focus-visible, .duty-board a:focus-visible, .duty-board select:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; }
+@media (max-width: 760px) { .db-row { flex-wrap: wrap; } .db-row-main { flex-basis: 100%; } }

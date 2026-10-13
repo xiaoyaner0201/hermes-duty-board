@@ -130,6 +130,19 @@
     return h("span", { className: "db-title" }, text);
   }
 
+  function LinkActions(props) {
+    const s = props.s || {};
+    if (!s.link || !s.app_link) return null;
+    const open = (event) => {
+      event.preventDefault(); event.stopPropagation();
+      if (props.openIn === "browser") window.open(s.link, "_blank", "noopener,noreferrer");
+      else window.location.href = s.app_link;
+    };
+    return h("span", { className: "db-link-actions" },
+      h("button", { className: "db-primary", type: "button", onClick: open, "aria-label": "Open in Discord" }, "Open in Discord"),
+      h("a", { className: "db-web", href: s.link, target: "_blank", rel: "noreferrer", "aria-label": "Web", onClick: (event) => event.stopPropagation() }, "Web"));
+  }
+
   function Section(props) {
     return h("section", { className: "db-section", id: props.id },
       h("header", { className: "db-section-head" },
@@ -193,7 +206,7 @@
   }
 
   function WaitingList(props) {
-    const { items, unanswered, now, leaving, onDismiss } = props;
+    const { items, unanswered, now, leaving, onDismiss, openIn } = props;
     return h(Section, { id: "db-waiting", title: "等你回复", count: items.length + unanswered.length, tone: items.length + unanswered.length ? "accent" : "muted", hint: "最后一句是我在问你 / 等你定，按等待时长排序" },
       unanswered.length ? h("div", { className: "db-alert" },
         h("div", { className: "db-alert-head" }, "你发了消息，但没有看到回复"),
@@ -201,6 +214,7 @@
           h("div", { className: "db-row" },
             h("div", { className: "db-row-main" }, h(Title, { s }), h(Place, { s })),
             h(Chip, { tone: "danger" }, "已 " + dur(now - s.since)),
+            h(LinkActions, { s, openIn }),
             h("button", { className: "db-ghost", type: "button", onClick: () => onDismiss(s.dismiss_key) }, "知道了")),
           s.ask ? h("div", { className: "db-quote" }, "你：" + s.ask) : null))) : null,
       items.length === 0 && unanswered.length === 0 ? h(Empty, null, "没有在等你的事") :
@@ -210,6 +224,7 @@
             h("div", { className: "db-row" },
               h("div", { className: "db-row-main" }, h(Title, { s }), h(Place, { s })),
               h(Chip, { tone: waitTone(w) }, "等了 " + dur(w)),
+              h(LinkActions, { s, openIn }),
               h("button", { className: "db-ghost", type: "button", title: "从列表里收起，有新回复会重新出现", onClick: () => onDismiss(s.dismiss_key) }, "已看过")),
             h("div", { className: "db-quote db-quote--me" }, s.reply_tail),
             s.ask ? h("div", { className: "db-sub" }, "起因：" + s.ask) : null);
@@ -217,7 +232,7 @@
   }
 
   function RunningList(props) {
-    const { items, now } = props;
+    const { items, now, openIn } = props;
     return h(Section, { id: "db-running", title: "正在跑", count: items.length, tone: items.length ? "live" : "muted", hint: "进度条满格 = 1 小时" },
       items.length === 0 ? h(Empty, null, "全部空闲") :
         items.map((s) => {
@@ -226,7 +241,8 @@
           return h("div", { key: s.session_id, className: "db-item db-card" + (s.stalled ? " is-stalled" : "") },
             h("div", { className: "db-row" },
               h("div", { className: "db-row-main" }, h(Title, { s }), h(Place, { s })),
-              h(Chip, { tone: s.stalled ? "warn" : "live" }, s.stalled ? dur(s.quiet_s) + " 没动静" : "已跑 " + dur(el))),
+              h(Chip, { tone: s.stalled ? "warn" : "live" }, s.stalled ? dur(s.quiet_s) + " 没动静" : "已跑 " + dur(el)),
+              h(LinkActions, { s, openIn })),
             h("div", { className: "db-bar" }, h("div", { className: "db-bar-fill" + (s.stalled ? " is-stalled" : ""), style: { width: pct + "%" } })),
             h("div", { className: "db-doing" }, h("span", { className: "db-pulse" }), s.private ? "处理中（内容不显示）" : (activityZh(s.doing) || "处理中")),
             s.ask ? h("div", { className: "db-sub" }, "在做：" + s.ask) : null);
@@ -309,6 +325,10 @@
   function DutyBoard() {
     const { data, error, okAt, reload } = useSummary();
     const now = useNow(1000);
+    const [openIn, setOpenIn] = useState(() => {
+      try { return localStorage.getItem("duty-board:open-in") === "browser" ? "browser" : "app"; } catch (_) { return "app"; }
+    });
+    const setOpenMode = (mode) => { setOpenIn(mode); try { localStorage.setItem("duty-board:open-in", mode); } catch (_) {} };
     const [leaving, setLeaving] = useState({});
 
     const onDismiss = useCallback((key) => {
@@ -331,6 +351,9 @@
           h("h1", { className: "db-h1" }, "值班台"),
           h("div", { className: "db-head-sub" }, "所有对话、后台任务和定时任务的实时状态")),
         h("div", { className: "db-head-right" },
+          h("label", { className: "db-open-mode" }, "Open links in: ",
+            h("select", { value: openIn, onChange: (event) => setOpenMode(event.target.value), "aria-label": "Open links in" },
+              h("option", { value: "app" }, "Discord app"), h("option", { value: "browser" }, "Browser"))),
           data ? h(GatewayChips, { g: data.gateway }) : null,
           h("span", { className: "db-live" + (stale ? " is-stale" : "") },
             h("span", { className: "db-live-dot" }),
@@ -340,10 +363,10 @@
           h(Kpis, { d: data, now }),
           h("div", { className: "db-grid" },
             h("div", { className: "db-col" },
-              h(WaitingList, { items: data.conversations.waiting, unanswered: data.conversations.unanswered, now, leaving, onDismiss }),
+              h(WaitingList, { items: data.conversations.waiting, unanswered: data.conversations.unanswered, now, leaving, onDismiss, openIn }),
               h(DoneList, { items: data.conversations.done, now })),
             h("div", { className: "db-col" },
-              h(RunningList, { items: data.conversations.running, now }),
+              h(RunningList, { items: data.conversations.running, now, openIn }),
               h(DelegationList, { d: data.delegations, now, leaving, onDismiss }),
               h(CronList, { c: data.cron, now }),
               h(GoalList, { g: data.goals })))));

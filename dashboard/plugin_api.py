@@ -178,18 +178,54 @@ def _iso_to_epoch(v: Any) -> Optional[float]:
         return None
 
 
-def _session_meta(row: sqlite3.Row, people: Dict[str, str]) -> Dict[str, Any]:
+_DIGITS_RE = re.compile(r"^[0-9]+$")
+
+
+def _numeric_id(value: Any) -> Optional[str]:
+    if value is None or isinstance(value, bool):
+        return None
+    text = str(value).strip()
+    return text if _DIGITS_RE.fullmatch(text) else None
+
+
+def _discord_links(
+    source: Any,
+    origin: Dict[str, Any],
+    channel: Any,
+    chat_type: Any,
+    message_id: Any = None,
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    if source != "discord":
+        return None, None, None
+    channel_id = _numeric_id(channel)
+    if not channel_id:
+        return None, None, None
+    if message_id not in (None, "") and not _numeric_id(message_id):
+        return None, None, None
+    guild_id = _numeric_id(origin.get("guild_id"))
+    if guild_id:
+        path = f"{guild_id}/{channel_id}"
+    elif chat_type == "dm":
+        path = f"@me/{channel_id}"
+    else:
+        return None, None, None
+    valid_message = _numeric_id(message_id)
+    if valid_message:
+        path = f"{path}/{valid_message}"
+    web = f"https://discord.com/channels/{path}"
+    app = f"discord://-/channels/{path}"
+    return web, app, web if valid_message else None
+
+
+def _session_meta(row: sqlite3.Row, people: Dict[str, str], message_id: Any = None) -> Dict[str, Any]:
     origin = {}
     try:
         origin = json.loads(row["origin_json"]) if row["origin_json"] else {}
     except Exception:
         origin = {}
     source = row["source"]
-    guild = origin.get("guild_id") or origin.get("scope_id")
     channel = row["thread_id"] or row["chat_id"] or origin.get("thread_id") or origin.get("chat_id")
-    link = None
-    if source == "discord" and guild and channel:
-        link = f"https://discord.com/channels/{guild}/{channel}"
+    link, app_link, message_link = _discord_links(source, origin, channel, row["chat_type"], message_id)
     display = row["display_name"] or origin.get("chat_name") or ""
     where = display
     if source == "discord" and " / " in display:
@@ -201,13 +237,13 @@ def _session_meta(row: sqlite3.Row, people: Dict[str, str]) -> Dict[str, Any]:
     who = people.get(uid) or origin.get("user_name") or ""
     return {
         "session_id": row["id"], "source": source, "title": _clip(title, 60),
-        "where": _clip(where, 60), "link": link, "who": who,
+        "where": _clip(where, 60), "link": link, "app_link": app_link, "message_link": message_link, "who": who,
     }
 
 
 def _recent_messages(conn: sqlite3.Connection, sid: str) -> List[sqlite3.Row]:
     return conn.execute(
-        """SELECT id, role, content, timestamp, display_kind FROM messages
+        """SELECT id, role, content, timestamp, display_kind, platform_message_id FROM messages
            WHERE session_id=? AND role IN ('user','assistant')
              AND content IS NOT NULL AND content != ''
            ORDER BY timestamp DESC LIMIT ?""",
@@ -231,7 +267,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
     }
     placeholders = ",".join("?" for _ in MESSAGING_SOURCES)
     rows = conn.execute(
-        f"""SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id,
+        f"""SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
                    started_at, last_activity_at, last_activity_description
             FROM sessions
             WHERE source IN ({placeholders}) AND ended_at IS NULL
@@ -242,10 +278,10 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
     running, waiting, unanswered, done = [], [], [], []
     for row in rows:
         sid = row["id"]
-        meta = _session_meta(row, people)
         msgs = _recent_messages(conn, sid)
         last_real: Optional[sqlite3.Row] = None
         last_user: Optional[Tuple[str, float]] = None
+        message_id = None
         last_any_ts = 0.0
         for m in msgs:
             content = _text(m["content"])
@@ -256,14 +292,16 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
                 continue
             if last_real is None:
                 last_real = m
+            if m["role"] == "user" and message_id is None and m["platform_message_id"]:
+                message_id = m["platform_message_id"]
             if m["role"] == "user" and last_user is None:
                 cleaned = _clean_user(content)
                 if cleaned:
                     last_user = (cleaned, float(m["timestamp"] or 0))
-            if last_real is not None and last_user is not None:
+            if last_real is not None and last_user is not None and message_id is not None:
                 break
         activity_at = float(row["last_activity_at"] or last_any_ts or row["started_at"] or 0)
-        base = dict(meta)
+        base = dict(_session_meta(row, people, message_id))
         uid = str(row["user_id"] or "")
         base["mine"] = (not owner) or uid == owner
         base["ask"] = _clip(last_user[0], 140) if last_user else ""
@@ -312,7 +350,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
             if not item["mine"]:
                 item.update({
                     "title": f"{item.get('who') or '其他人'}的对话", "where": "", "ask": "",
-                    "doing": "", "link": None, "private": True,
+                    "doing": "", "link": None, "app_link": None, "message_link": None, "private": True,
                 })
 
     running.sort(key=lambda x: x.get("started_at") or 0)
@@ -326,7 +364,7 @@ def _session_title(conn: sqlite3.Connection, sid: Optional[str], people: Dict[st
     if not sid:
         return {}
     row = conn.execute(
-        """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id
+        """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type
            FROM sessions WHERE id=?""", (sid,)).fetchone()
     return _session_meta(row, people) if row else {}
 
@@ -445,7 +483,7 @@ def _collect_goals(conn: sqlite3.Connection, now: float) -> Dict[str, Any]:
             continue
         sid = r["key"].split(":", 1)[1]
         srow = conn.execute(
-            """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id,
+            """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
                       COALESCE(last_activity_at, started_at) AS act FROM sessions WHERE id=?""", (sid,)).fetchone()
         if srow is None or srow["source"] not in MESSAGING_SOURCES:
             continue
