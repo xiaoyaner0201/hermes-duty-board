@@ -1,0 +1,132 @@
+{
+  "appTitle": "值班台",
+  "appSubtitle": "所有對話、背景任務和排程任務的即時狀態",
+  "openIn": "開啟連結：",
+  "discordApp": "Discord 應用程式",
+  "browser": "瀏覽器",
+  "warnings": "部分資料暫時無法使用",
+  "waiting": "等你回覆",
+  "waitingHint": "最後一句是在問你 / 等你決定，按等待時間排序",
+  "unanswered": "你發了訊息，但沒有收到回覆",
+  "waitingEmpty": "沒有正在等你的事",
+  "unansweredAge": "已 {value}",
+  "waitingAge": "等了 {value}",
+  "causedBy": "起因：{value}",
+  "you": "你：{value}",
+  "openInDiscord": "在 Discord 中開啟",
+  "web": "網頁",
+  "dismiss": "知道了",
+  "seen": "已看過",
+  "collapse": "收起",
+  "expandMore": {
+    "other": "展開其餘 {count} 條"
+  },
+  "running": "執行中",
+  "runningHint": "進度條滿格 = 1 小時",
+  "allIdle": "全部閒置",
+  "runningFor": "已執行 {value}",
+  "stalledFor": "{value} 沒有動靜",
+  "doing": "處理中",
+  "privateConversation": "{who}的對話",
+  "someone": "其他人",
+  "privateContent": "內容不顯示",
+  "delegations": "背景子任務",
+  "noDelegations": "沒有正在執行的背景子任務",
+  "completedNotDelivered": "已完成，但結果未能送回原對話",
+  "delegationHint": "可能已在新對話中處理，開啟確認後收起",
+  "parallel": {
+    "other": "{count} 路並行"
+  },
+  "completedAt": "完成於 {value}",
+  "handled": "已處理",
+  "cron": "排程任務",
+  "cronPaused": {
+    "other": "{count} 個已暫停"
+  },
+  "cronRunning": "執行中",
+  "cronScript": "腳本",
+  "cronUpcoming": "下一個 {time} · {name}",
+  "cronReason": {
+    "lastError": "錯誤：{detail}",
+    "deliveryError": "傳送失敗：{detail}",
+    "state": "狀態：{detail}",
+    "overdue": "逾時未執行"
+  },
+  "recentDone": "最近完成",
+  "recentDoneHint": "最近一天內，最後一句是回報而不是提問",
+  "promised": "說過會回來回報",
+  "none": "暫無",
+  "goals": "長期目標",
+  "staleGoals": {
+    "other": "另有 {count} 個超出時間範圍的舊目標未顯示"
+  },
+  "noGoals": "近期沒有掛起的長期目標",
+  "progress": {
+    "other": "{turns}/{count} 回合"
+  },
+  "active": "進行中",
+  "paused": "已暫停",
+  "gateway": {
+    "connected": "線上",
+    "retrying": "重新連線中",
+    "disconnected": "離線",
+    "error": "異常"
+  },
+  "refreshed": "{value}前更新",
+  "justNow": "剛剛更新",
+  "loading": "讀取中…",
+  "loadFailed": "載入失敗：{error}",
+  "stale": "資料已 {value} 未更新",
+  "sectionUnavailable": "部分區域無法使用",
+  "neverRan": "尚未執行過",
+  "ago": "{value}前",
+  "in": "{value}後",
+  "soon": "即將執行",
+  "conversation": "對話",
+  "activity": {
+    "output": "正在輸出",
+    "response": "等待模型回應",
+    "waiting": "等待 {who} 回應 · {duration}",
+    "call": "第 {n} 次模型呼叫",
+    "callDone": "呼叫完成",
+    "starting": "剛開始",
+    "retry": "介面錯誤重試 {a}/{b}",
+    "tool": "執行 {tool}",
+    "toolDone": "{tool} 完成",
+    "toolError": "{tool} 出錯",
+    "terminal": "終端命令已執行 {duration}",
+    "script": "腳本已執行 {duration}",
+    "compressed": "剛完成上下文壓縮",
+    "subtask": "子任務 · {value}"
+  },
+  "section": {
+    "conversations": "對話",
+    "gateway": "閘道狀態",
+    "database": "Hermes 資料庫"
+  },
+  "issue": {
+    "missingTable": "{section}：找不到資料表 {detail}",
+    "missingColumn": "{section}：找不到欄位 {detail}",
+    "collectorFailed": "{section}：讀取失敗（{detail}）"
+  },
+  "platform": {
+    "discord": "Discord",
+    "telegram": "Telegram",
+    "slack": "Slack",
+    "whatsapp": "WhatsApp",
+    "whatsapp_cloud": "WhatsApp",
+    "signal": "Signal",
+    "mattermost": "Mattermost",
+    "matrix": "Matrix",
+    "feishu": "飛書",
+    "dingtalk": "釘釘",
+    "wecom": "企業微信",
+    "weixin": "微信",
+    "wechat": "微信",
+    "wechat_android": "微信",
+    "qqbot": "QQ",
+    "bluebubbles": "iMessage",
+    "email": "電子郵件",
+    "sms": "簡訊"
+  }
+}

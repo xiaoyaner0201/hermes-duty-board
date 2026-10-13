@@ -38,6 +38,28 @@ def test_waiting_detection_localized_and_noise(client, home):
     assert waiting["waiting-en"]["app_link"].startswith("discord://-/channels/")
 
 
+def test_waiting_detection_covers_other_scripts(client, home):
+    now = float((home / "fixture-now").read_text())
+    cases = {
+        "ar": "هل أتابع النشر؟",
+        "fr": "Voulez-vous que je continue ?",
+        "es": "¿Sigo con el despliegue?",
+        "ru": "Продолжить развёртывание?",
+        "ko": "배포를 계속할까요?",
+        "de-quote": "Soll ich »fertig?« schreiben",
+        "fr-report": "Rapport terminé. Voir https://example.test/a?b=1",
+    }
+    for index, (name, reply) in enumerate(cases.items()):
+        sid = f"script-{name}"
+        add_session(home, sid, title=name, now=now)
+        add_message(home, sid, "user", "Go", timestamp=now - 120, platform_message_id=str(9100 + index))
+        add_message(home, sid, "assistant", reply, timestamp=now - 60)
+
+    waiting = {item["session_id"] for item in summary(client)["conversations"]["waiting"]}
+    assert {"script-ar", "script-fr", "script-es", "script-ru", "script-ko", "script-de-quote"} <= waiting
+    assert "script-fr-report" not in waiting
+
+
 def test_unanswered_and_live_lease_are_distinct(client, home):
     now = float((home / "fixture-now").read_text())
     add_session(home, "unanswered", title="unanswered", now=now)
@@ -263,10 +285,22 @@ def test_schema_drift_keeps_summary_healthy_and_warns(client, home):
     response = client.get("/api/plugins/duty-board/summary")
     assert response.status_code == 200
     data = response.json()
-    assert data["schema_version"] == 1
-    assert data["plugin_version"] == "0.2.1"
+    assert data["schema_version"] == 2
+    assert data["plugin_version"] == "0.3.0"
     assert data["conversations"]["running"] == []
+    assert {"section": "running", "code": "missingTable", "detail": "session_turn_leases"} in data["issues"]
+    # Plain-text mirror stays for older clients and logs.
     assert any(warning.startswith("running: table session_turn_leases not found") for warning in data["warnings"])
+
+
+def test_collector_failure_is_a_code_not_an_exception_message(client, home, monkeypatch, api_module):
+    def boom(now):
+        raise RuntimeError("/private/path/that/must/not/leak")
+
+    monkeypatch.setattr(api_module, "_collect_cron", boom)
+    data = summary(client)
+    assert {"section": "cron", "code": "collectorFailed", "detail": "RuntimeError"} in data["issues"]
+    assert "/private/path" not in json.dumps(data)
 
 
 def test_cron_reason_codes_are_structured(client, home):

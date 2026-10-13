@@ -85,9 +85,9 @@ hermes dashboard --stop && hermes dashboard
 
 ## 「あなたの返信待ち」の判定方法
 
-プラグインはモデルを一切呼びません。最後の返信のうち、意味のある最後の 1〜2 行だけを見ます（添付・リンク・脚注は除外）。そこに疑問符か、判断をあなたに委ねる表現（「よろしいですか」「教えてください」、英語・中国語の同様の表現）があるかを調べます。長い報告の途中にある質問は数えません。
+プラグインはモデルを一切呼びません。最後の返信のうち、意味のある最後の 1〜2 行だけを見ます（添付・リンク・脚注は除外）。そこに疑問符（`?`、`？`、`؟`）か、判断をあなたに委ねる表現（「よろしいですか」「教えてください」、英語・中国語の同様の表現）があるかを調べます。長い報告の途中にある質問は数えません。
 
-経験則に基づく判定なので、ときどき誤判定があります。その場合は「確認済み」で閉じてください。現在は英語・中国語・日本語に対応しています。他の言語のパターンも歓迎します。
+経験則に基づく判定なので、ときどき誤判定があります。その場合は「確認済み」で閉じてください。疑問符による判定はすべての言語で有効です。疑問符のない「判断を委ねる表現」は現在、英語・中国語・日本語のみに対応しています。他の言語のパターンも歓迎します。
 
 ## プライバシーと安全性
 
@@ -99,7 +99,9 @@ hermes dashboard --stop && hermes dashboard
 
 ## 多言語対応
 
-UI はダッシュボードの言語設定に従います：English、简体中文、繁體中文、日本語。新しい言語は `dashboard/dist/index.js` 冒頭のメッセージカタログに 1 つ追加するだけです。キーの抜けは `tests/js/i18n_check.mjs` が検出します。
+Hermes ダッシュボードが提供する 17 言語すべてに対応しています：English、简体中文、繁體中文、日本語、한국어、Deutsch、Español、Français、Italiano、Português、Русский、Українська、Türkçe、Magyar、Afrikaans、Gaeilge、العربية（右から左）。ダッシュボードで言語を切り替えると、このタブもすぐに切り替わります。件数は各言語の複数形ルールに従い、時間・数値・リストはブラウザの `Intl` API で整形します。
+
+翻訳は `dashboard/i18n/<locale>.json` にあり、`en.json` が基準です。ネイティブスピーカーによる修正を歓迎します。手順は [CONTRIBUTING.md](CONTRIBUTING.md#translations) を参照してください。
 
 ## 開発
 
@@ -107,7 +109,7 @@ UI はダッシュボードの言語設定に従います：English、简体中�
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest
-node --check dashboard/dist/index.js && node tests/js/i18n_check.mjs
+node --check dashboard/dist/index.js && node tools/build_i18n.mjs --check && node tests/js/i18n_check.mjs
 ```
 
 `dev/harness/` を使うと、Hermes なしで合成データの Hermes ホームを使ってこのタブを表示できます。上のスクリーンショットもこの方法で撮っています。詳しくは [dev/README.md](dev/README.md) を参照してください。

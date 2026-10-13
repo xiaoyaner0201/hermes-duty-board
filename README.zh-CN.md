@@ -85,9 +85,9 @@ hermes dashboard --stop && hermes dashboard
 
 ## 怎么判断“在等你”
 
-插件不调用任何模型。它只看最后一条回复里最后一两行有意义的内容（附件、链接、脚注会跳过），找问号或交给你决定的说法，例如“要不要我……”“你定”，以及英文、日文里的同类表达。长篇汇报中间出现的问句不算。
+插件不调用任何模型。它只看最后一条回复里最后一两行有意义的内容（附件、链接、脚注会跳过），找问号（`?`、`？`、`؟`）或交给你决定的说法，例如“要不要我……”“你定”，以及英文、日文里的同类表达。长篇汇报中间出现的问句不算。
 
-这是一种经验规则，偶尔会误判，点「已看过」收起即可。目前支持中文、英文、日文，欢迎补充其他语言的规则。
+这是一种经验规则，偶尔会误判，点「已看过」收起即可。问号规则对所有语言都有效；不带问号的“交给你决定”说法目前只识别中文、英文、日文，欢迎补充其他语言的规则。
 
 ## 隐私与安全
 
@@ -99,7 +99,9 @@ hermes dashboard --stop && hermes dashboard
 
 ## 多语言
 
-界面语言跟随后台的语言设置：English、简体中文、繁體中文、日本語。新增一种语言，只需在 `dashboard/dist/index.js` 顶部的文案表里加一组；`tests/js/i18n_check.mjs` 会检查有没有漏掉的键。
+Hermes 后台自带的 17 种语言，值班台全部支持：English、简体中文、繁體中文、日本語、한국어、Deutsch、Español、Français、Italiano、Português、Русский、Українська、Türkçe、Magyar、Afrikaans、Gaeilge、العربية（从右往左排版）。在后台切换语言，值班台会立刻跟着变。数量按各语言自己的单复数规则显示，时长、数字和列表交给浏览器的 `Intl` 接口格式化。
+
+译文放在 `dashboard/i18n/<语言>.json`，以 `en.json` 为准。欢迎母语使用者帮忙纠正，做法见 [CONTRIBUTING.md](CONTRIBUTING.md#translations)。
 
 ## 开发
 
@@ -107,7 +109,7 @@ hermes dashboard --stop && hermes dashboard
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest
-node --check dashboard/dist/index.js && node tests/js/i18n_check.mjs
+node --check dashboard/dist/index.js && node tools/build_i18n.mjs --check && node tests/js/i18n_check.mjs
 ```
 
 `dev/harness/` 可以脱离 Hermes，用一份模拟的 Hermes 数据目录渲染这个页面，上面的截图就是这样做的。详见 [dev/README.md](dev/README.md)。

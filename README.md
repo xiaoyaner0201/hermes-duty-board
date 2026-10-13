@@ -85,9 +85,9 @@ Everything is optional. To change the defaults, create `~/.hermes/duty-board/set
 
 ## How "waiting on you" is decided
 
-The plugin calls no model. It reads only the last one or two meaningful lines of the final reply, skipping attachments, links and footnotes. It looks for a question mark or a hand-off phrase ("should I…", "let me know", "your call"; "要不要我…", "你定"; "よろしいですか", "教えてください"). Questions in the middle of a long report do not count.
+The plugin calls no model. It reads only the last one or two meaningful lines of the final reply, skipping attachments, links and footnotes. It looks for a question mark (`?`, `？`, `؟`) or a hand-off phrase ("should I…", "let me know", "your call"; "要不要我…", "你定"; "よろしいですか", "教えてください"). Questions in the middle of a long report do not count.
 
-This is a heuristic. You will see the odd false positive; *Seen* clears it. Matching works for English, Chinese and Japanese; contributions for other languages are welcome.
+This is a heuristic. You will see the odd false positive; *Seen* clears it. The question-mark rule covers every language; hand-off phrases without a question mark are matched for English, Chinese and Japanese, and contributions for other languages are welcome.
 
 ## Privacy and safety
 
@@ -99,7 +99,16 @@ This is a heuristic. You will see the odd false positive; *Seen* clears it. Matc
 
 ## Languages
 
-The UI follows the dashboard's language setting: English, 简体中文, 繁體中文, 日本語. Adding a locale means adding one object to the catalog at the top of `dashboard/dist/index.js`; `tests/js/i18n_check.mjs` makes sure no key is missing.
+The tab speaks every language the Hermes dashboard ships, 17 in all: English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Español, Français, Italiano, Português, Русский, Українська, Türkçe, Magyar, Afrikaans, Gaeilge and العربية (right-to-left). It follows the dashboard's language switch live. Counts use each language's plural rules, and durations, numbers and lists are formatted by the browser's `Intl` APIs.
+
+Translations live in `dashboard/i18n/<locale>.json`, with `en.json` as the source of truth. Corrections from native speakers are very welcome; see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
+
+<details>
+<summary>Right-to-left: the same board in Arabic</summary>
+
+![Duty Board in Arabic](docs/screenshot.ar.png)
+
+</details>
 
 ## Development
 
@@ -107,7 +116,7 @@ The UI follows the dashboard's language setting: English, 简体中文, 繁體�
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest
-node --check dashboard/dist/index.js && node tests/js/i18n_check.mjs
+node --check dashboard/dist/index.js && node tools/build_i18n.mjs --check && node tests/js/i18n_check.mjs
 ```
 
 `dev/harness/` renders the tab outside Hermes against a synthetic Hermes home, which is how the screenshot above was made. See [dev/README.md](dev/README.md).

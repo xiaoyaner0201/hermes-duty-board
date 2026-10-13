@@ -33,13 +33,13 @@
 /* KPI tiles */
 .db-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--db-gap); margin-bottom: 20px; }
 .db-kpi {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: start;
   padding: 14px 16px; border: 1px solid var(--db-line); border-radius: var(--db-radius);
   background: var(--color-card); color: inherit; cursor: pointer;
   transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
   position: relative; overflow: hidden;
 }
-.db-kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; transition: background .3s; }
+.db-kpi::before { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 3px; background: transparent; transition: background .3s; }
 .db-kpi:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--color-foreground) 22%, var(--db-line)); }
 .db-kpi-label { font-size: .8rem; color: var(--db-muted); }
 .db-kpi-value { font-size: 1.9rem; font-weight: 650; line-height: 1.1; }
@@ -60,7 +60,7 @@
 .db-section { border: 1px solid var(--db-line); border-radius: var(--db-radius); background: var(--color-card); padding: 14px 16px 10px; scroll-margin-top: 16px; }
 .db-section-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .db-section-head h2 { font-size: 1rem; font-weight: 620; margin: 0; }
-.db-section-hint { color: var(--db-muted); font-size: .76rem; margin-left: auto; }
+.db-section-hint { color: var(--db-muted); font-size: .76rem; margin-inline-start: auto; }
 .db-count { font-size: .75rem; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--color-foreground) 8%, transparent); }
 .db-count--accent { background: color-mix(in srgb, var(--db-accent) 18%, transparent); }
 .db-count--live { background: color-mix(in srgb, var(--db-live) 18%, transparent); }
@@ -79,12 +79,12 @@
 .db-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .db-title { font-weight: 560; font-size: .92rem; color: inherit; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 a.db-title:hover { color: var(--db-accent); }
-.db-title-arrow { font-size: .75em; margin-left: 4px; opacity: 0; transition: opacity .2s; }
+.db-title-arrow { font-size: .75em; margin-inline-start: 4px; opacity: 0; transition: opacity .2s; }
 a.db-title:hover .db-title-arrow { opacity: .8; }
 .db-place { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; color: var(--db-muted); min-width: 0; }
 .db-place-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .db-quote { margin-top: 7px; padding: 7px 10px; font-size: .84rem; line-height: 1.5; border-radius: calc(var(--db-radius) - 4px); background: color-mix(in srgb, var(--color-foreground) 4%, transparent); }
-.db-quote--me { border-left: 2px solid color-mix(in srgb, var(--db-accent) 60%, transparent); }
+.db-quote--me { border-inline-start: 2px solid color-mix(in srgb, var(--db-accent) 60%, transparent); }
 .db-sub { margin-top: 5px; font-size: .78rem; color: var(--db-muted); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .db-time { font-size: .76rem; color: var(--db-muted); white-space: nowrap; }
 .db-mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: .72rem; color: var(--db-muted); }
@@ -129,7 +129,7 @@ a.db-title:hover .db-title-arrow { opacity: .8; }
 .db-tl-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--color-foreground) 40%, transparent); justify-self: center; }
 .db-tl-dot.is-bad { border-color: var(--db-danger); }
 .db-tl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-tl-tag { font-size: .68rem; margin-left: 6px; color: var(--db-muted); border: 1px solid var(--db-line); border-radius: 4px; padding: 0 4px; }
+.db-tl-tag { font-size: .68rem; margin-inline-start: 6px; color: var(--db-muted); border: 1px solid var(--db-line); border-radius: 4px; padding: 0 4px; }
 .db-tl-eta { color: var(--db-muted); font-size: .76rem; white-space: nowrap; }
 
 .db-loading { color: var(--db-muted); padding: 40px 0; text-align: center; }
@@ -149,3 +149,10 @@ a.db-title:hover .db-title-arrow { opacity: .8; }
 .db-open-mode select { color: var(--color-foreground); background: var(--color-card); border: 1px solid var(--db-line); border-radius: 6px; padding: 4px; }
 .duty-board button:focus-visible, .duty-board a:focus-visible, .duty-board select:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 3px; }
 @media (max-width: 760px) { .db-row { flex-wrap: wrap; } .db-row-main { flex-basis: 100%; } }
+
+/* right-to-left locales: mirror the slide-out and the external-link arrow */
+.duty-board[dir="rtl"] .db-item.is-leaving { transform: translateX(-10px); }
+.duty-board[dir="rtl"] .db-title-arrow { display: inline-block; transform: scaleX(-1); }
+/* Free text (titles, quotes, agent replies) takes its own direction from its content via dir="auto";
+   align it to its own start so an English reply in an Arabic UI still reads left-aligned. */
+.duty-board [dir="auto"] { text-align: start; unicode-bidi: plaintext; }
