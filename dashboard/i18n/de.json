@@ -6,7 +6,7 @@
   "browser": "Webbrowser",
   "warnings": "Einige Daten sind nicht verfügbar",
   "waiting": "Wartet auf deine Antwort",
-  "waitingHint": "Die letzte Antwort fragt nach deiner Entscheidung, älteste zuerst",
+  "waitingHint": "Die letzte Antwort bittet dich um eine Entscheidung; älteste zuerst",
   "unanswered": "Nachricht gesendet, aber keine Antwort erhalten",
   "waitingEmpty": "Keine Antwort von dir erforderlich",
   "unansweredAge": "wartet seit {value}",
@@ -16,7 +16,7 @@
   "openInDiscord": "In Discord öffnen",
   "web": "Web",
   "dismiss": "Ausblenden",
-  "seen": "Zur Kenntnis genommen",
+  "seen": "Gesehen",
   "collapse": "Einklappen",
   "expandMore": {
     "one": "{count} weiteren Eintrag anzeigen",
@@ -33,7 +33,7 @@
   "privateContent": "Inhalt ausgeblendet",
   "delegations": "Hintergrundaufgaben",
   "noDelegations": "Keine laufenden Hintergrundaufgaben",
-  "completedNotDelivered": "Abgeschlossen, aber Ergebnis nicht zugestellt",
+  "completedNotDelivered": "Fertig, Ergebnis nicht zugestellt",
   "delegationHint": "Das Ergebnis ist möglicherweise in einer neueren Unterhaltung. Zum Prüfen öffnen, dann ausblenden",
   "parallel": {
     "one": "{count} Subagent läuft parallel",

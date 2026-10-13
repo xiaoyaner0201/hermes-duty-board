@@ -1,6 +1,6 @@
 {
   "appTitle": "لوحة المناوبة",
-  "appSubtitle": "الحالة المباشرة للمحادثات والعمل في الخلفية والمهام المجدولة",
+  "appSubtitle": "الحالة الآنية للمحادثات والمهام الخلفية والمجدولة",
   "openIn": "فتح الروابط باستخدام",
   "discordApp": "تطبيق Discord",
   "browser": "المتصفح",
@@ -47,7 +47,7 @@
     "many": "{count} وكيلًا فرعيًا بالتوازي",
     "other": "وكلاء فرعيون بالتوازي: {count}"
   },
-  "completedAt": "اكتملت {value}",
+  "completedAt": "اكتملت: {value}",
   "handled": "تمت المعالجة",
   "cron": "المهام المجدولة",
   "cronPaused": {
@@ -60,7 +60,7 @@
   },
   "cronRunning": "قيد التنفيذ",
   "cronScript": "برنامج نصي",
-  "cronUpcoming": "التالي {time} · {name}",
+  "cronUpcoming": "التالي: {time} · {name}",
   "cronReason": {
     "lastError": "خطأ: {detail}",
     "deliveryError": "فشل التسليم: {detail}",
@@ -93,7 +93,7 @@
   "paused": "متوقف مؤقتًا",
   "gateway": {
     "connected": "متصل",
-    "retrying": "جارٍ إعادة الاتصال",
+    "retrying": "جارٍ الاتصال مجددًا",
     "disconnected": "غير متصل",
     "error": "خطأ"
   },

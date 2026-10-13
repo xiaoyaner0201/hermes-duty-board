@@ -43,7 +43,7 @@
     "many": "Паралельно: {count} субагентів",
     "other": "Паралельно: {count} субагента"
   },
-  "completedAt": "завершено {value}",
+  "completedAt": "завершено: {value}",
   "handled": "Опрацьовано",
   "cron": "Завдання за розкладом",
   "cronPaused": {
@@ -54,7 +54,7 @@
   },
   "cronRunning": "Виконується",
   "cronScript": "скрипт",
-  "cronUpcoming": "наступне {time} · {name}",
+  "cronUpcoming": "наступне: {time} · {name}",
   "cronReason": {
     "lastError": "Помилка: {detail}",
     "deliveryError": "Не вдалося доставити результат: {detail}",

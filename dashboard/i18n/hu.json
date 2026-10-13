@@ -19,8 +19,8 @@
   "seen": "Megtekintve",
   "collapse": "Összecsukás",
   "expandMore": {
-    "one": "További {count} elem megjelenítése",
-    "other": "További {count} elem megjelenítése"
+    "one": "További {count} elem",
+    "other": "További {count} elem"
   },
   "running": "Fut",
   "runningHint": "A teljes sáv egy órát jelent",

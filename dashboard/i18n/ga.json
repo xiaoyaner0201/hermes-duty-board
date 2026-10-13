@@ -45,7 +45,7 @@
     "many": "Fo-ghníomhairí ag rith go comhuaineach: {count}",
     "other": "Fo-ghníomhairí ag rith go comhuaineach: {count}"
   },
-  "completedAt": "Críochnaithe {value}",
+  "completedAt": "Críochnaithe: {value}",
   "handled": "Láimhseáilte",
   "cron": "Poist sceidealta",
   "cronPaused": {
@@ -57,7 +57,7 @@
   },
   "cronRunning": "Ag rith",
   "cronScript": "Script ríomhaire",
-  "cronUpcoming": "An chéad cheann eile {time} · {name}",
+  "cronUpcoming": "An chéad cheann eile: {time} · {name}",
   "cronReason": {
     "lastError": "Earráid: {detail}",
     "deliveryError": "Theip ar an seachadadh: {detail}",
@@ -127,7 +127,7 @@
   "issue": {
     "missingTable": "{section}: níor aimsíodh an tábla {detail}",
     "missingColumn": "{section}: níor aimsíodh an colún {detail}",
-    "collectorFailed": "{section}: níorbh fhéidir é a léamh ({detail})"
+    "collectorFailed": "{section}: níorbh fhéidir na sonraí a léamh ({detail})"
   },
   "platform": {
     "discord": "Discord",

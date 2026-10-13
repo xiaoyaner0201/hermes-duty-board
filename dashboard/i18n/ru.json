@@ -43,7 +43,7 @@
     "many": "Параллельно: {count} субагентов",
     "other": "Параллельно: {count} субагента"
   },
-  "completedAt": "завершено {value}",
+  "completedAt": "завершено: {value}",
   "handled": "Обработано",
   "cron": "Задачи по расписанию",
   "cronPaused": {
@@ -54,7 +54,7 @@
   },
   "cronRunning": "Выполняется",
   "cronScript": "скрипт",
-  "cronUpcoming": "далее {time} · {name}",
+  "cronUpcoming": "далее: {time} · {name}",
   "cronReason": {
     "lastError": "Ошибка: {detail}",
     "deliveryError": "Не удалось доставить результат: {detail}",

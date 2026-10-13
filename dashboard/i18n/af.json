@@ -6,7 +6,7 @@
   "browser": "Blaaier",
   "warnings": "Sommige data is nie beskikbaar nie",
   "waiting": "Wag op jou antwoord",
-  "waitingHint": "Die laaste antwoord vra jou besluit, oudste eerste",
+  "waitingHint": "Die laaste antwoord vra dat jy besluit; oudste gesprekke eerste",
   "unanswered": "Jy het geskryf, maar geen antwoord ontvang nie",
   "waitingEmpty": "Niks wag op jou antwoord nie",
   "unansweredAge": "wag al {value}",
@@ -24,7 +24,7 @@
   },
   "running": "Loop",
   "runningHint": "’n Volle balk verteenwoordig een uur",
-  "allIdle": "Alles ledig",
+  "allIdle": "Alles onaktief",
   "runningFor": "loop al {value}",
   "stalledFor": "geen aktiwiteit vir {value} nie",
   "doing": "Besig",
@@ -39,7 +39,7 @@
     "one": "{count} subagent werk parallel",
     "other": "{count} subagente werk parallel"
   },
-  "completedAt": "voltooi {value}",
+  "completedAt": "voltooi: {value}",
   "handled": "Afgehandel",
   "cron": "Geskeduleerde take",
   "cronPaused": {
@@ -48,7 +48,7 @@
   },
   "cronRunning": "Loop",
   "cronScript": "skrip",
-  "cronUpcoming": "volgende {time} · {name}",
+  "cronUpcoming": "volgende: {time} · {name}",
   "cronReason": {
     "lastError": "Fout: {detail}",
     "deliveryError": "Aflewering het misluk: {detail}",
@@ -89,14 +89,14 @@
   "soon": "binnekort",
   "conversation": "Gesprek",
   "activity": {
-    "output": "Stroom uitset",
+    "output": "Uitset word gestroom",
     "response": "Wag op modelantwoord",
     "waiting": "Wag op {who} · {duration}",
     "call": "Modeloproep #{n}",
     "callDone": "Modeloproep voltooi",
     "starting": "Pas begin",
-    "retry": "API-oproep word herprobeer {a}/{b}",
-    "tool": "Voer {tool} uit",
+    "retry": "API-oproep word weer probeer ({a}/{b})",
+    "tool": "{tool} word uitgevoer",
     "toolDone": "{tool} voltooi",
     "toolError": "{tool} het misluk",
     "terminal": "Terminaalopdrag loop ({duration})",
@@ -106,7 +106,7 @@
   },
   "section": {
     "conversations": "Gesprekke",
-    "gateway": "Deurgangstatus",
+    "gateway": "Toegangspoortstatus",
     "database": "Hermes-databasis"
   },
   "issue": {

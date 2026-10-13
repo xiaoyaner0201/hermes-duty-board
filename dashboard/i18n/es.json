@@ -6,7 +6,7 @@
   "browser": "Navegador",
   "warnings": "Algunos datos no están disponibles",
   "waiting": "Esperando tu respuesta",
-  "waitingHint": "La última respuesta solicita tu decisión, de más antigua a más reciente",
+  "waitingHint": "La última respuesta pide que decidas; conversaciones más antiguas primero",
   "unanswered": "Escribiste, pero no llegó ninguna respuesta",
   "waitingEmpty": "Nada requiere tu respuesta",
   "unansweredAge": "sin respuesta desde hace {value}",
@@ -34,15 +34,15 @@
   "privateContent": "Contenido oculto",
   "delegations": "Tareas en segundo plano",
   "noDelegations": "No hay tareas en segundo plano en ejecución",
-  "completedNotDelivered": "Finalizado, pero el resultado no se entregó",
+  "completedNotDelivered": "Finalizada, resultado no entregado",
   "delegationHint": "El resultado podría estar en una conversación más reciente; ábrela para comprobarlo y después oculta la tarjeta",
   "parallel": {
     "one": "{count} subagente en paralelo",
     "many": "{count} subagentes en paralelo",
     "other": "{count} subagentes en paralelo"
   },
-  "completedAt": "finalizado: {value}",
-  "handled": "Resuelto",
+  "completedAt": "finalizada: {value}",
+  "handled": "Resuelta",
   "cron": "Tareas programadas",
   "cronPaused": {
     "one": "{count} pausada",
@@ -60,8 +60,8 @@
   },
   "recentDone": "Completadas recientemente",
   "recentDoneHint": "En las últimas 24 horas; la última respuesta fue un informe, no una pregunta",
-  "promised": "Prometió volver a informar",
-  "none": "Ninguno",
+  "promised": "Prometió responder más tarde",
+  "none": "Ninguna",
   "goals": "Objetivos a largo plazo",
   "staleGoals": {
     "one": "{count} objetivo anterior oculto",
@@ -111,7 +111,7 @@
   },
   "section": {
     "conversations": "Conversaciones",
-    "gateway": "Estado de la pasarela",
+    "gateway": "Estado del Gateway",
     "database": "Base de datos de Hermes"
   },
   "issue": {
