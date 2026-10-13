@@ -24,7 +24,7 @@ const summary = {
   schema_version: 2, plugin_version: "test", generated_at: now,
   issues: [{ section: "running", code: "missingTable", detail: "session_turn_leases" }, { section: "cron", code: "collectorFailed", detail: "OSError" }],
   warnings: ["running: table session_turn_leases not found", "cron: collector failed (OSError)"],
-  gateway: { platforms: [{ name: "discord", state: "connected" }, { name: "feishu", state: "retrying" }, { name: "custom_bridge", state: "weird" }] },
+  gateway: { platforms: [{ name: "discord", state: "connected" }, { name: "feishu", state: "retrying" }, { name: "custom_bridge", state: "weird" }, { name: "proto_bridge", state: "__proto__" }, { name: "constructor", state: "toString" }] },
   conversations: {
     waiting: [conv("w1"), conv("w2", { since: now - 90000 })],
     unanswered: [conv("u1")],
