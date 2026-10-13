@@ -19,7 +19,7 @@ def test_waiting_detection_localized_and_noise(client, home):
     cases = {
         "cn": "要不要我继续？",
         "en": "Should I go ahead?",
-        "ja": "進めてもよろしいですか？",
+        "ja": "進めてもよろしいですか",
         "url": "See https://example.test/?q=1",
         "mid": "Should I go ahead?\nThe report is complete.",
         "media": "要不要我继续？\nMEDIA: image.png\n[^1]: footnote",
