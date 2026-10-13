@@ -153,3 +153,6 @@ a.db-title:hover .db-title-arrow { opacity: .8; }
 /* right-to-left locales: mirror the slide-out and the external-link arrow */
 .duty-board[dir="rtl"] .db-item.is-leaving { transform: translateX(-10px); }
 .duty-board[dir="rtl"] .db-title-arrow { display: inline-block; transform: scaleX(-1); }
+/* Free text (titles, quotes, agent replies) takes its own direction from its content via dir="auto";
+   align it to its own start so an English reply in an Arabic UI still reads left-aligned. */
+.duty-board [dir="auto"] { text-align: start; unicode-bidi: plaintext; }

@@ -14,4 +14,10 @@ window.__HERMES_PLUGIN_SDK__ = {
   components: {},
   utils,
   fetchJSON: (url, init) => fetch(url, init).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+  // Mirrors the host's I18nContextValue: {locale, setLocale, t}. The harness reads
+  // ?lang= (or localStorage "hermes-locale"), like the dashboard's language switch.
+  useI18n: () => {
+    const lang = new URLSearchParams(window.location.search).get("lang") || window.localStorage.getItem("hermes-locale") || "en";
+    return { locale: lang, setLocale: () => {}, t: {} };
+  },
 };

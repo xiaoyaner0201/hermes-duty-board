@@ -86,6 +86,10 @@ for (const locale of catalogs) {
     if (locale !== "en" && text.includes(english)) problems.push(`${tag} still shows English "${english}"`);
   }
   if (locale !== "en" && html === en) problems.push(`${tag} identical to English`);
+  // User content (titles, places, asks) must be bidi-isolated so it keeps its own direction inside RTL text.
+  for (const needle of ["<bdi>Release notes</bdi>", "<bdi>#projects</bdi>", "<bdi>ship it</bdi>", "<bdi>Ana</bdi>"]) {
+    if (!html.includes(needle)) problems.push(`${tag} user content not isolated: ${needle}`);
+  }
   // The localStorage fallback (older hosts without SDK.useI18n) must pick the same locale.
   if (render(locale, false) !== html) problems.push(`${tag} localStorage fallback renders differently from host locale`);
 }
