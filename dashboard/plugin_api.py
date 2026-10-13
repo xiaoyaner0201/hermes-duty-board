@@ -1,4 +1,11 @@
-"""值班台 (duty-board) — read-only dashboard API.
+"""Duty Board — read-only dashboard API.
+
+Optional duty-board/settings.json: owner, hide_other_people_content (true),
+people (id -> label), window_days (7), stall_seconds (600),
+unanswered_grace_seconds (180), recent_done_hours (24), goal_lookback_days (14),
+messaging_sources (DEFAULT_MESSAGING_SOURCES). DUTY_BOARD_OWNER overrides owner.
+Unset owner means all conversations are mine. Numeric values are clamped.
+Labels fall back to platform user names; settings and labels are optional.
 
 One endpoint aggregates the things that get lost when work is spread over many
 Discord threads: which conversations are running right now, which ones end on a
@@ -14,6 +21,8 @@ the only file this plugin writes is its own dismiss list under
 from __future__ import annotations
 
 import json
+import os
+import logging
 import re
 import sqlite3
 import threading
@@ -29,12 +38,18 @@ try:
     from hermes_constants import get_hermes_home
 except Exception:  # pragma: no cover - only outside a Hermes runtime
     def get_hermes_home() -> Path:  # type: ignore[misc]
-        return Path.home() / ".hermes"
+        return Path(os.environ.get("HERMES_HOME") or Path.home() / ".hermes")
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-MESSAGING_SOURCES = ("discord", "feishu", "telegram", "wechat_android", "weixin", "wechat", "slack")
+DEFAULT_MESSAGING_SOURCES = ("discord", "feishu", "telegram", "wechat_android", "weixin", "wechat", "slack")
+DEFAULTS = {
+    "window_days": 7, "stall_seconds": 600, "unanswered_grace_seconds": 180,
+    "recent_done_hours": 24, "goal_lookback_days": 14,
+    "messaging_sources": DEFAULT_MESSAGING_SOURCES,
+}
 WINDOW_DAYS = 7               # conversations considered at all
 RECENT_DONE_HOURS = 24        # "recently finished" column
 UNANSWERED_GRACE_S = 180      # a user message with no live turn for this long = possibly dropped
@@ -102,6 +117,41 @@ def _load_json(path: Path, default: Any) -> Any:
         return default
 
 
+def _clamp_number(raw: Any, default: float, minimum: float, maximum: float, integer: bool = False) -> Any:
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = default
+    value = max(minimum, min(maximum, value))
+    return int(value) if integer else value
+
+
+def _runtime_settings() -> Dict[str, Any]:
+    raw = _settings()
+    env_owner = os.environ.get("DUTY_BOARD_OWNER")
+    owner = env_owner if env_owner is not None else raw.get("owner")
+    owner = str(owner).strip() if owner is not None else ""
+    sources = raw.get("messaging_sources", DEFAULTS["messaging_sources"])
+    if isinstance(sources, str):
+        sources = [sources]
+    if not isinstance(sources, (list, tuple)):
+        sources = DEFAULTS["messaging_sources"]
+    sources = tuple(str(source).strip() for source in sources if str(source).strip())
+    if not sources:
+        sources = DEFAULTS["messaging_sources"]
+    return {
+        "owner": owner,
+        "hide_other_people_content": bool(raw.get("hide_other_people_content", True)),
+        "people": {str(k): str(v) for k, v in (raw.get("people") or {}).items()} if isinstance(raw.get("people"), dict) else {},
+        "window_days": _clamp_number(raw.get("window_days"), 7, 1, 365, integer=True),
+        "stall_seconds": _clamp_number(raw.get("stall_seconds"), 600, 30, 7 * 86400),
+        "unanswered_grace_seconds": _clamp_number(raw.get("unanswered_grace_seconds"), 180, 0, 7 * 86400),
+        "recent_done_hours": _clamp_number(raw.get("recent_done_hours"), 24, 1, 30 * 24, integer=True),
+        "goal_lookback_days": _clamp_number(raw.get("goal_lookback_days"), 14, 1, 365, integer=True),
+        "messaging_sources": sources,
+    }
+
+
 def _settings() -> Dict[str, Any]:
     return _load_json(_state_dir() / "settings.json", {})
 
@@ -110,9 +160,8 @@ def _dismissed() -> Dict[str, Any]:
     return _load_json(_state_dir() / "dismissed.json", {})
 
 
-def _is_owner(user_id: Any) -> bool:
-    """True when the board should show this person's content (no owner set = everyone)."""
-    settings = _settings()
+def _is_owner(user_id: Any, settings: Optional[Dict[str, Any]] = None) -> bool:
+    settings = settings or _runtime_settings()
     owner = str(settings.get("owner") or "")
     if not owner or not settings.get("hide_other_people_content", True):
         return True
@@ -254,25 +303,25 @@ def _recent_messages(conn: sqlite3.Connection, sid: str) -> List[sqlite3.Row]:
 # ── collectors ─────────────────────────────────────────────────────────────
 
 def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, List[Dict[str, Any]]]:
-    settings = _settings()
+    settings = _runtime_settings()
     people = {str(k): v for k, v in (settings.get("people") or {}).items()}
     owner = str(settings.get("owner") or "")
     # Conversations with other people: show that they exist (title, place, timing) but
     # never their content — the board is the owner's console, not a transcript viewer.
-    private_others = bool(settings.get("hide_other_people_content", True))
+    private_others = bool(owner and settings.get("hide_other_people_content", True))
     dismissed = _dismissed()
     leases = {
         r["conversation_id"]: r for r in conn.execute(
             "SELECT conversation_id, acquired_at, expires_at FROM session_turn_leases WHERE expires_at > ?", (now,))
     }
-    placeholders = ",".join("?" for _ in MESSAGING_SOURCES)
+    placeholders = ",".join("?" for _ in settings["messaging_sources"])
     rows = conn.execute(
         f"""SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
                    started_at, last_activity_at, last_activity_description
             FROM sessions
             WHERE source IN ({placeholders}) AND ended_at IS NULL
               AND COALESCE(last_activity_at, started_at) > ?""",
-        (*MESSAGING_SOURCES, now - WINDOW_DAYS * 86400),
+        (*settings["messaging_sources"], now - settings["window_days"] * 86400),
     ).fetchall()
 
     running, waiting, unanswered, done = [], [], [], []
@@ -303,7 +352,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
         activity_at = float(row["last_activity_at"] or last_any_ts or row["started_at"] or 0)
         base = dict(_session_meta(row, people, message_id))
         uid = str(row["user_id"] or "")
-        base["mine"] = (not owner) or uid == owner
+        base["mine"] = _is_owner(uid, settings)
         base["ask"] = _clip(last_user[0], 140) if last_user else ""
         base["ask_at"] = last_user[1] if last_user else None
         base["activity_at"] = activity_at
@@ -315,7 +364,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
                 "started_at": started,
                 "doing": _clip(row["last_activity_description"] or "", 80),
                 "quiet_s": quiet,
-                "stalled": bool(quiet is not None and quiet > STALL_S),
+                "stalled": bool(quiet is not None and quiet > settings["stall_seconds"]),
             })
             running.append(base)
             continue
@@ -323,7 +372,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
             continue
         msg_ts = float(last_real["timestamp"] or 0)
         if last_real["role"] == "user":
-            if now - msg_ts > UNANSWERED_GRACE_S:
+            if now - msg_ts > settings["unanswered_grace_seconds"]:
                 key = f"{sid}:{last_real['id']}"
                 if key not in dismissed:
                     base.update({"since": msg_ts, "dismiss_key": key})
@@ -336,7 +385,7 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
         if _ASK_RE.search(tail):
             if key not in dismissed:
                 waiting.append(base)
-        elif now - msg_ts < RECENT_DONE_HOURS * 3600:
+        elif now - msg_ts < settings["recent_done_hours"] * 3600:
             base["promised"] = bool(_PROMISE_RE.search(_meaningful_tail(reply, 3)))
             done.append(base)
 
@@ -370,7 +419,7 @@ def _session_title(conn: sqlite3.Connection, sid: Optional[str], people: Dict[st
 
 
 def _collect_delegations(conn: sqlite3.Connection, now: float) -> Dict[str, List[Dict[str, Any]]]:
-    people = {str(k): v for k, v in (_settings().get("people") or {}).items()}
+    people = {str(k): v for k, v in (_runtime_settings().get("people") or {}).items()}
     dismissed = _dismissed()
     running, dropped = [], []
     rows = conn.execute(
@@ -472,7 +521,7 @@ def _collect_cron(now: float) -> Dict[str, Any]:
 
 
 def _collect_goals(conn: sqlite3.Connection, now: float) -> Dict[str, Any]:
-    people = {str(k): v for k, v in (_settings().get("people") or {}).items()}
+    people = {str(k): v for k, v in (_runtime_settings().get("people") or {}).items()}
     live, stale = [], 0
     for r in conn.execute("SELECT key, value FROM state_meta WHERE key LIKE 'goal:%'").fetchall():
         try:
@@ -485,9 +534,9 @@ def _collect_goals(conn: sqlite3.Connection, now: float) -> Dict[str, Any]:
         srow = conn.execute(
             """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
                       COALESCE(last_activity_at, started_at) AS act FROM sessions WHERE id=?""", (sid,)).fetchone()
-        if srow is None or srow["source"] not in MESSAGING_SOURCES:
+        if srow is None or srow["source"] not in _runtime_settings()["messaging_sources"]:
             continue
-        if (srow["act"] or 0) < now - GOAL_LOOKBACK_DAYS * 86400:
+        if (srow["act"] or 0) < now - _runtime_settings()["goal_lookback_days"] * 86400:
             stale += 1
             continue
         if not _is_owner(srow["user_id"]):
