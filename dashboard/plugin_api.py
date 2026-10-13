@@ -37,12 +37,14 @@ except Exception:  # pragma: no cover - only outside a Hermes runtime
     get_hermes_home = None  # type: ignore[assignment]
 
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 DEFAULT_MESSAGING_SOURCES = (
-    "discord", "feishu", "telegram", "wechat_android", "weixin", "wechat", "slack",
+    "discord", "telegram", "slack", "whatsapp", "whatsapp_cloud", "signal", "mattermost", "matrix",
+    "feishu", "dingtalk", "wecom", "weixin", "wechat", "wechat_android", "qqbot", "bluebubbles",
+    "email", "sms", "yuanbao",
 )
 DEFAULTS = {
     "window_days": 7,
@@ -88,7 +90,7 @@ _NOISE_LINE_RE = re.compile(
     re.I,
 )
 _URL_RE = re.compile(r"<?https?://\S+>?", re.I)
-_DIGITS_RE = re.compile(r"^\d+$")
+_DIGITS_RE = re.compile(r"^[0-9]{1,25}$")
 
 _cache_lock = threading.Lock()
 _cache: Dict[str, Any] = {"at": 0.0, "data": None, "home": None}
@@ -136,6 +138,10 @@ def _clamp_number(raw: Any, default: float, minimum: float, maximum: float, inte
     return int(value) if integer else value
 
 
+def _strict_bool(raw: Any, default: bool) -> bool:
+    return raw if isinstance(raw, bool) else default
+
+
 def _runtime_settings() -> Dict[str, Any]:
     raw = _settings()
     env_owner = os.environ.get("DUTY_BOARD_OWNER")
@@ -151,7 +157,7 @@ def _runtime_settings() -> Dict[str, Any]:
         sources = DEFAULTS["messaging_sources"]
     return {
         "owner": owner,
-        "hide_other_people_content": bool(raw.get("hide_other_people_content", True)),
+        "hide_other_people_content": _strict_bool(raw.get("hide_other_people_content"), True),
         "people": {str(k): str(v) for k, v in (raw.get("people") or {}).items()} if isinstance(raw.get("people"), dict) else {},
         "window_days": _clamp_number(raw.get("window_days"), 7, 1, 365, integer=True),
         "stall_seconds": _clamp_number(raw.get("stall_seconds"), 600, 30, 7 * 86400),
@@ -361,14 +367,38 @@ def _session_meta(row: sqlite3.Row, people: Dict[str, str], message_id: Any = No
 
 
 def _recent_messages(conn: sqlite3.Connection, sid: str, columns: Set[str]) -> List[sqlite3.Row]:
-    selected = [column for column in ("id", "role", "content", "timestamp", "display_kind", "platform_message_id") if column in columns]
+    selected = [column for column in (
+        "id", "role", "content", "timestamp", "display_kind", "platform_message_id",
+    ) if column in columns]
+    # Hermes keeps undone/rewound rows with active=0; only the live transcript counts.
+    live = "AND active=1" if "active" in columns else ""
     return conn.execute(
         f"""SELECT {', '.join(selected)} FROM messages
            WHERE session_id=? AND role IN ('user','assistant')
-             AND content IS NOT NULL AND content != ''
+             AND content IS NOT NULL AND content != '' {live}
            ORDER BY timestamp DESC LIMIT ?""",
         (sid, SCAN_LIMIT_MSGS),
     ).fetchall()
+
+
+_ORIGIN_JSON_RE = re.compile(r"^\s*Gateway message origin \(JSON data[^\n]*\n(\{[^\n]*\})", re.S)
+_VERIFIED_SENDER_RE = re.compile(r"\[Verified sender:[^\]]*?\buser_id ([0-9A-Za-z._:@<>-]+)")
+
+
+def _message_sender(content: str) -> Optional[str]:
+    """Sender user id recorded by the gateway on a user row, when present."""
+    match = _ORIGIN_JSON_RE.match(content or "")
+    if match:
+        try:
+            value = json.loads(match.group(1)).get("user_id")
+            if value not in (None, ""):
+                return str(value)
+        except (ValueError, AttributeError):
+            pass
+    match = _VERIFIED_SENDER_RE.search((content or "")[:600])
+    if match:
+        return match.group(1).strip("<@>")
+    return None
 
 
 # ── collectors ────────────────────────────────────────────────────────────
@@ -381,7 +411,7 @@ _MESSAGE_COLUMNS = ("id", "session_id", "role", "content", "timestamp", "display
 _LEASE_COLUMNS = ("conversation_id", "acquired_at", "expires_at")
 _DELEGATION_COLUMNS = (
     "delegation_id", "state", "delivery_state", "dispatched_at", "completed_at", "updated_at",
-    "parent_session_id", "origin_session_id", "task_json", "result_json",
+    "parent_session_id", "task_json", "result_json",
 )
 
 
@@ -436,6 +466,7 @@ def _collect_conversations(
         messages = _recent_messages(conn, sid, schema["messages"])
         last_real: Optional[sqlite3.Row] = None
         latest_user: Optional[Tuple[str, float]] = None
+        latest_sender: Optional[str] = None
         target_message_id: Optional[str] = None
         last_any_ts = 0.0
         for message in messages:
@@ -455,12 +486,17 @@ def _collect_conversations(
                     cleaned = _clean_user(content)
                     if cleaned:
                         latest_user = (cleaned, float(_row_get(message, "timestamp") or 0))
+                        latest_sender = _message_sender(content)
             if last_real is not None and latest_user is not None:
                 break
         activity_at = float(_row_get(row, "last_activity_at") or last_any_ts or _row_get(row, "started_at") or 0)
         meta = _session_meta(row, people, target_message_id)
-        uid = str(_row_get(row, "user_id") or "")
+        # Shared threads can hold several people. When the gateway recorded who sent the
+        # latest message, that person owns the turn; otherwise fall back to the session owner.
+        uid = latest_sender or str(_row_get(row, "user_id") or "")
         base = dict(meta)
+        if latest_sender and latest_sender != str(_row_get(row, "user_id") or ""):
+            base["who"] = people.get(latest_sender, "")
         base.update({
             "mine": _is_owner(uid, settings),
             "ask": _clip(latest_user[0], 140) if latest_user else "",
@@ -572,9 +608,10 @@ def _collect_delegations(
     dismissed = _dismissed()
     running: List[Dict[str, Any]] = []
     dropped: List[Dict[str, Any]] = []
+    origin_col = "origin_session_id" if "origin_session_id" in schema["async_delegations"] else "NULL AS origin_session_id"
     rows = conn.execute(
-        """SELECT delegation_id, state, delivery_state, dispatched_at, completed_at, updated_at,
-                  parent_session_id, origin_session_id, task_json, result_json
+        f"""SELECT delegation_id, state, delivery_state, dispatched_at, completed_at, updated_at,
+                  parent_session_id, {origin_col}, task_json, result_json
            FROM async_delegations
            WHERE state='running' OR (delivery_state='dropped' AND COALESCE(completed_at, updated_at) > ?)
            ORDER BY dispatched_at DESC""",
@@ -591,7 +628,8 @@ def _collect_delegations(
             "model": task.get("model") or "", "dispatched_at": row["dispatched_at"],
             "session": _session_title(conn, row["parent_session_id"] or row["origin_session_id"], settings["people"], schema),
         }
-        if not _is_owner(user_id, settings):
+        private = not _is_owner(user_id, settings)
+        if private:
             item.update({
                 "private": True,
                 "who": settings["people"].get(str(user_id), task.get("user_name") or ""),
@@ -601,7 +639,7 @@ def _collect_delegations(
             running.append(item)
         elif row["delegation_id"] not in dismissed:
             item["completed_at"] = row["completed_at"] or row["updated_at"]
-            item["summary"] = _clip(_strip_md(_result_summary(row["result_json"])), 200)
+            item["summary"] = "" if private else _clip(_strip_md(_result_summary(row["result_json"])), 200)
             item["dismiss_key"] = row["delegation_id"]
             dropped.append(item)
     return {"running": running, "dropped": dropped}
@@ -790,22 +828,30 @@ class DismissBody(BaseModel):
     undo: bool = False
 
 
+_DISMISS_LOCK = threading.Lock()
+_DISMISS_MAX_ENTRIES = 2000
+
+
 @router.post("/dismiss")
 def dismiss(body: DismissBody) -> Dict[str, Any]:
     key = (body.key or "").strip()
     if not key or len(key) > 200:
         return {"ok": False, "error": "bad key"}
     path = _state_dir() / "dismissed.json"
-    data = _dismissed()
-    if body.undo:
-        data.pop(key, None)
-    else:
-        data[key] = time.time()
-    cutoff = time.time() - 30 * 86400
-    data = {k: value for k, value in data.items() if isinstance(value, (int, float)) and value > cutoff}
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=0), encoding="utf-8")
-    tmp.replace(path)
+    with _DISMISS_LOCK:
+        data = _dismissed()
+        if body.undo:
+            data.pop(key, None)
+        else:
+            data[key] = time.time()
+        cutoff = time.time() - 30 * 86400
+        fresh = [(k, value) for k, value in data.items() if isinstance(value, (int, float)) and value > cutoff]
+        fresh.sort(key=lambda pair: pair[1], reverse=True)
+        data = dict(fresh[:_DISMISS_MAX_ENTRIES])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".dismissed.{os.getpid()}.{threading.get_ident()}.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=0), encoding="utf-8")
+        os.replace(tmp, path)
     with _cache_lock:
         _cache.update(at=0.0, data=None, home=None)
     return {"ok": True}

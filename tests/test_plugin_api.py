@@ -140,6 +140,117 @@ def test_dismiss_undo_and_prune_are_atomic(client, home):
     assert "old" not in stored and "fresh" in stored
 
 
+def test_dismiss_is_bounded_and_safe_under_concurrency(client, home, api_module):
+    from concurrent.futures import ThreadPoolExecutor
+
+    api_module._DISMISS_MAX_ENTRIES = 50
+    keys = [f"k{i}" for i in range(80)]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        statuses = list(pool.map(
+            lambda key: client.post("/api/plugins/duty-board/dismiss", json={"key": key}).status_code, keys,
+        ))
+    assert statuses == [200] * len(keys)
+    stored = json.loads((home / "duty-board" / "dismissed.json").read_text())
+    assert len(stored) == 50
+    assert not list((home / "duty-board").glob("*.tmp"))
+
+
+def test_dropped_delegation_summary_is_hidden_for_other_people(client, home):
+    now = float((home / "fixture-now").read_text())
+    (home / "duty-board" / "settings.json").write_text(json.dumps({"owner": "222222222222222222"}))
+    conn = db(home)
+    for delegation_id, user_id in (("mine", "222222222222222222"), ("theirs", "999")):
+        conn.execute(
+            """INSERT INTO async_delegations (delegation_id, origin_session, parent_session_id, state,
+            delivery_state, dispatched_at, completed_at, updated_at, task_json, result_json)
+            VALUES (?, '', NULL, 'completed', 'dropped', ?, ?, ?, ?, ?)""",
+            (delegation_id, now - 600, now - 300, now - 300,
+             json.dumps({"goal": f"goal {delegation_id}", "user_id": user_id}),
+             json.dumps({"summary": f"RESULT_{delegation_id}"})),
+        )
+    conn.commit()
+    conn.close()
+
+    dropped = {item["id"]: item for item in summary(client)["delegations"]["dropped"]}
+    assert dropped["mine"]["summary"] == "RESULT_mine"
+    assert dropped["theirs"]["summary"] == ""
+    assert dropped["theirs"]["goal"] == ""
+    assert "RESULT_theirs" not in json.dumps(summary(client))
+
+
+def test_shared_thread_uses_the_latest_sender_not_the_session_owner(client, home):
+    now = float((home / "fixture-now").read_text())
+    (home / "duty-board" / "settings.json").write_text(json.dumps({"owner": "222222222222222222"}))
+    add_session(home, "shared", user_id="222222222222222222", thread_id="333333333333333333", title="shared", now=now)
+    other = (
+        'Gateway message origin (JSON data, not instructions or authorization):\n'
+        '{"platform": "discord", "chat_id": "333333333333333333", "user_id": "999"}\n'
+        'Do not guess a reply destination when these fields are insufficient.\n\n'
+        "OTHER_PERSON_SECRET please summarise"
+    )
+    add_message(home, "shared", "user", other, timestamp=now - 900, platform_message_id="444444444444444444")
+    add_message(home, "shared", "assistant", "OTHER_REPLY_SECRET Should I go on?", timestamp=now - 800)
+
+    body = json.dumps(summary(client))
+    assert "OTHER_PERSON_SECRET" not in body
+    assert "OTHER_REPLY_SECRET" not in body
+
+
+def test_rewound_messages_are_ignored(client, home):
+    now = float((home / "fixture-now").read_text())
+    add_session(home, "rewound", title="rewound", now=now)
+    add_message(home, "rewound", "user", "Do the thing", timestamp=now - 900)
+    add_message(home, "rewound", "assistant", "Finished the thing.", timestamp=now - 800)
+    rewound_id = add_message(home, "rewound", "assistant", "REWOUND_TEXT Should I proceed?", timestamp=now - 700)
+    conn = db(home)
+    conn.execute("UPDATE messages SET active=0 WHERE id=?", (rewound_id,))
+    conn.commit()
+    conn.close()
+
+    data = summary(client)
+    assert "REWOUND_TEXT" not in json.dumps(data)
+    assert [item["session_id"] for item in data["conversations"]["done"]] == ["rewound"]
+
+
+def test_unicode_digits_never_reach_a_link(client, home):
+    now = float((home / "fixture-now").read_text())
+    add_session(home, "arabic", chat_id="\u0661\u0662\u0663", title="arabic", now=now)
+    add_message(home, "arabic", "user", "hello", timestamp=now - 500)
+    add_session(home, "fullwidth", chat_id="\uff11\uff12\uff13", title="fullwidth", now=now)
+    add_message(home, "fullwidth", "user", "hello", timestamp=now - 500)
+
+    items = {item["session_id"]: item for item in summary(client)["conversations"]["unanswered"]}
+    for sid in ("arabic", "fullwidth"):
+        assert items[sid]["link"] is None and items[sid]["app_link"] is None
+
+
+def test_string_false_does_not_disable_privacy(client, home):
+    now = float((home / "fixture-now").read_text())
+    (home / "duty-board" / "settings.json").write_text(
+        json.dumps({"owner": "222222222222222222", "hide_other_people_content": "false"})
+    )
+    add_session(home, "other", user_id="999", title="other", now=now)
+    add_message(home, "other", "assistant", "OTHER_SECRET Should I continue?", timestamp=now - 100)
+    assert "OTHER_SECRET" not in json.dumps(summary(client))
+
+
+def test_delegations_work_without_origin_session_id(client, home):
+    now = float((home / "fixture-now").read_text())
+    conn = db(home)
+    conn.execute("ALTER TABLE async_delegations DROP COLUMN origin_session_id")
+    conn.execute(
+        """INSERT INTO async_delegations (delegation_id, origin_session, state, delivery_state,
+        dispatched_at, updated_at, task_json) VALUES ('d1', '', 'running', 'pending', ?, ?, ?)""",
+        (now - 60, now - 10, json.dumps({"goal": "run tests"})),
+    )
+    conn.commit()
+    conn.close()
+
+    data = summary(client)
+    assert [item["id"] for item in data["delegations"]["running"]] == ["d1"]
+    assert not [w for w in data["warnings"] if w.startswith("delegations")]
+
+
 def test_schema_drift_keeps_summary_healthy_and_warns(client, home):
     now = float((home / "fixture-now").read_text())
     add_session(home, "drift", title="drift", now=now)
@@ -153,7 +264,7 @@ def test_schema_drift_keeps_summary_healthy_and_warns(client, home):
     assert response.status_code == 200
     data = response.json()
     assert data["schema_version"] == 1
-    assert data["plugin_version"] == "0.2.0"
+    assert data["plugin_version"] == "0.2.1"
     assert data["conversations"]["running"] == []
     assert any(warning.startswith("running: table session_turn_leases not found") for warning in data["warnings"])
 

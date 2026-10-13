@@ -17,7 +17,8 @@ CREATE TABLE sessions (
 );
 CREATE TABLE messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, role TEXT NOT NULL,
-    content TEXT, timestamp REAL NOT NULL, display_kind TEXT, platform_message_id TEXT
+    content TEXT, timestamp REAL NOT NULL, display_kind TEXT, platform_message_id TEXT,
+    active INTEGER NOT NULL DEFAULT 1, compacted INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE session_turn_leases (
     conversation_id TEXT PRIMARY KEY, holder TEXT NOT NULL, acquired_at REAL NOT NULL,
