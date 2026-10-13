@@ -338,6 +338,10 @@ def _session_meta(row: sqlite3.Row, people: Dict[str, str], message_id: Any = No
     title = _row_get(row, "title") or (display.split(" / ")[-1] if display else _row_get(row, "id"))
     if str(title).startswith("["):
         title = display.split(" / ")[-1] if display else title
+    if " / " in str(where):
+        parts = str(where).split(" / ")
+        if len(parts) > 1 and parts[-1].strip() == str(title).strip():
+            where = " / ".join(parts[:-1])
     user_id = str(_row_get(row, "user_id") or origin.get("user_id") or "")
     who = people.get(user_id) or origin.get("user_name") or ""
     channel = _row_get(row, "thread_id") or _row_get(row, "chat_id") or origin.get("thread_id") or origin.get("chat_id")

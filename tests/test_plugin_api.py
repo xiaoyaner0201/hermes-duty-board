@@ -5,7 +5,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 
-from tests.fixtures.make_home import add_lease, add_message, add_session
+from tests.fixtures.make_home import add_lease, add_message, add_session, db
 
 
 def summary(client):
@@ -83,6 +83,23 @@ def test_links_cover_thread_dm_invalid_and_non_discord(client, home):
     assert waiting["bad-message"]["link"] is None
     assert waiting["feishu"]["link"] is None
     assert waiting["feishu"]["app_link"] is None
+
+
+def test_place_line_does_not_repeat_the_thread_title(client, home):
+    now = float((home / "fixture-now").read_text())
+    add_session(home, "named", thread_id="333333333333333333", title="Fix the login bug", now=now)
+    conn = db(home)
+    conn.execute(
+        "UPDATE sessions SET display_name=? WHERE id=?",
+        ("Home Lab / #work / Fix the login bug", "named"),
+    )
+    conn.commit()
+    conn.close()
+    add_message(home, "named", "user", "Please look at it", timestamp=now - 500, platform_message_id="444444444444444444")
+
+    item = summary(client)["conversations"]["unanswered"][0]
+    assert item["title"] == "Fix the login bug"
+    assert item["where"] == "#work"
 
 
 def test_privacy_hides_other_people_content_but_keeps_running_presence(client, home):
