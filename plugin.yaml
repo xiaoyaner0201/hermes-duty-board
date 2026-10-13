@@ -1,4 +1,4 @@
 name: duty-board
-version: 0.1.0
+version: 0.2.0
 description: "值班台：Dashboard 实时看板——等你回复的会话、正在跑的任务、后台子任务和定时任务健康。只读 Hermes 状态，没有 Agent/Gateway 钩子。"
 kind: standalone

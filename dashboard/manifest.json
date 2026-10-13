@@ -1,9 +1,9 @@
 {
   "name": "duty-board",
-  "label": "值班台",
-  "description": "实时总览：等你回复的会话、正在跑的任务、后台子任务、定时任务健康",
+  "label": "Duty Board",
+  "description": "Live conversation, background job, and scheduled job status",
   "icon": "Activity",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "tab": {
     "path": "/duty",
     "position": "before:sessions"

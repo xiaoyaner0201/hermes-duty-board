@@ -1,35 +1,32 @@
-"""Duty Board — read-only dashboard API.
+"""Duty Board dashboard API.
 
-Optional duty-board/settings.json: owner, hide_other_people_content (true),
-people (id -> label), window_days (7), stall_seconds (600),
-unanswered_grace_seconds (180), recent_done_hours (24), goal_lookback_days (14),
-messaging_sources (DEFAULT_MESSAGING_SOURCES). DUTY_BOARD_OWNER overrides owner.
-Unset owner means all conversations are mine. Numeric values are clamped.
-Labels fall back to platform user names; settings and labels are optional.
+The plugin is intentionally read-only against Hermes state.  It writes only its
+own dismissal file below ``<HERMES_HOME>/duty-board``.
 
-One endpoint aggregates the things that get lost when work is spread over many
-Discord threads: which conversations are running right now, which ones end on a
-question to the user, which ones got a user message and never answered, which
-background delegations are in flight (or finished but could not be delivered),
-cron health, and standing goals.
+Optional ``duty-board/settings.json`` keys:
 
-Everything is computed deterministically from Hermes' own state (state.db,
-cron/jobs.json, gateway_state.json). No model calls, no writes to Hermes state;
-the only file this plugin writes is its own dismiss list under
-``<HERMES_HOME>/duty-board/``.
+* ``owner`` — platform user id whose conversations count as "mine".  When it is
+  absent every conversation counts as mine and nothing is hidden.  The
+  ``DUTY_BOARD_OWNER`` environment variable overrides this value.
+* ``hide_other_people_content`` — default ``true`` when an owner is set.
+* ``people`` — map of platform user ids to display labels.
+* ``window_days``, ``stall_seconds``, ``unanswered_grace_seconds``,
+  ``recent_done_hours``, ``goal_lookback_days`` and ``messaging_sources`` —
+  tunables, with the defaults declared below.  Values are clamped to safe
+  ranges before use.
 """
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 import re
 import sqlite3
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -37,26 +34,26 @@ from pydantic import BaseModel
 try:
     from hermes_constants import get_hermes_home
 except Exception:  # pragma: no cover - only outside a Hermes runtime
-    def get_hermes_home() -> Path:  # type: ignore[misc]
-        return Path(os.environ.get("HERMES_HOME") or Path.home() / ".hermes")
+    get_hermes_home = None  # type: ignore[assignment]
 
 
+__version__ = "0.2.0"
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-DEFAULT_MESSAGING_SOURCES = ("discord", "feishu", "telegram", "wechat_android", "weixin", "wechat", "slack")
+DEFAULT_MESSAGING_SOURCES = (
+    "discord", "feishu", "telegram", "wechat_android", "weixin", "wechat", "slack",
+)
 DEFAULTS = {
-    "window_days": 7, "stall_seconds": 600, "unanswered_grace_seconds": 180,
-    "recent_done_hours": 24, "goal_lookback_days": 14,
+    "window_days": 7,
+    "stall_seconds": 600,
+    "unanswered_grace_seconds": 180,
+    "recent_done_hours": 24,
+    "goal_lookback_days": 14,
     "messaging_sources": DEFAULT_MESSAGING_SOURCES,
 }
-WINDOW_DAYS = 7               # conversations considered at all
-RECENT_DONE_HOURS = 24        # "recently finished" column
-UNANSWERED_GRACE_S = 180      # a user message with no live turn for this long = possibly dropped
-STALL_S = 600                 # live turn with no activity for this long = possibly stuck
-DROPPED_LOOKBACK_DAYS = 7
-GOAL_LOOKBACK_DAYS = 14
 CACHE_TTL_S = 4.0
+DROPPED_LOOKBACK_DAYS = 7
 SCAN_LIMIT_MSGS = 40
 
 # Messages stored with role=user that were not typed by a person.
@@ -65,49 +62,57 @@ _INTERNAL_PREFIXES = (
     "[Your active task list", "[System:", "[Cron delivery", "[Note:", "[SYSTEM:",
 )
 _META_PREFIX_RE = re.compile(
-    r"^\s*(?:\[(?:Verified sender|Untrusted sender|Triggering message id|Replying to|Voice channel)[^\]]*\]\s*)+"
+    r"^\s*(?:\[(?:Verified sender|Untrusted sender|Triggering message id|Replying to|Voice channel)[^\]]*\]\s*)+",
 )
 _ORIGIN_BLOCK_RE = re.compile(
     r"^\s*Gateway message origin \(JSON data[^\n]*\n\{.*?\}\n(?:Do not guess[^\n]*\n)?\s*", re.S
 )
-# A finished reply that hands the decision back to the user: judged on its last
-# meaningful lines only (attachments, links and footnotes stripped), so a "?" in a
-# URL or a question asked mid-report does not count.
+# Only the meaningful tail is tested.  URL question marks, mid-report
+# questions, MEDIA lines, and footnotes therefore do not turn a report into a
+# waiting card.
 _ASK_RE = re.compile(
     r"？|\?(?=\s|$|[*_」”』）)\]])|要不要我|要不要先|需不需要我|是否需要|你定|你来定|拍板|请确认|你确认|确认要|"
-    r"等你|说一声|告诉我|回一句|你选|还是你|可以吗|好吗|行吗|你看呢|你觉得"
+    r"等你|说一声|告诉我|回一句|你选|还是你|可以吗|好吗|行吗|你看呢|你觉得|"
+    r"should I|do you want|let me know|your call|confirm|shall I|which one|would you like|"
+    r"しますか|よろしいですか|教えてください|どうしますか|確認してください",
+    re.I,
 )
-# A finished reply that promises more work later.
-_PROMISE_RE = re.compile(r"我会|稍后|到时候|完成后|跑完|做完|写完|再告诉你|再来跟你说|再汇报|回来告诉你|随后")
-_NOISE_LINE_RE = re.compile(r"^(MEDIA:|https?://|<https?://|\[\d+\]|_.*_$|`[^`]*`$|-{3,}$)")
-_URL_RE = re.compile(r"<?https?://\S+>?")
-
-
-def _meaningful_tail(reply: str, n_lines: int = 2) -> str:
-    lines = [ln.strip() for ln in reply.strip().splitlines()]
-    kept: List[str] = []
-    for ln in reversed(lines):
-        if not ln or _NOISE_LINE_RE.match(ln):
-            continue
-        kept.append(_URL_RE.sub("", ln))
-        if len(kept) >= n_lines:
-            break
-    return "\n".join(reversed(kept))
+_PROMISE_RE = re.compile(
+    r"我会|稍后|到时候|完成后|跑完|做完|写完|再告诉你|再来跟你说|再汇报|回来告诉你|随后|"
+    r"I'll|I will|will report back|later|when it's done|I'll let you know|"
+    r"後で|完了したら|報告します",
+    re.I,
+)
+_NOISE_LINE_RE = re.compile(
+    r"^(?:MEDIA:|https?://|<https?://|\[\d+\]|\[\^\d+\]:|_.*_$|`[^`]*`$|-{3,}$)",
+    re.I,
+)
+_URL_RE = re.compile(r"<?https?://\S+>?", re.I)
+_DIGITS_RE = re.compile(r"^\d+$")
 
 _cache_lock = threading.Lock()
-_cache: Dict[str, Any] = {"at": 0.0, "data": None}
+_cache: Dict[str, Any] = {"at": 0.0, "data": None, "home": None}
 
 
-# ── helpers ────────────────────────────────────────────────────────────────
+# ── home, settings, schema ────────────────────────────────────────────────
+
 
 def _home() -> Path:
-    return Path(get_hermes_home())
+    override = os.environ.get("HERMES_HOME")
+    if override:
+        return Path(override).expanduser()
+    if get_hermes_home is not None:
+        try:
+            return Path(get_hermes_home())
+        except Exception:
+            logger.debug("Hermes home lookup failed; using ~/.hermes", exc_info=True)
+    return Path.home() / ".hermes"
 
 
 def _state_dir() -> Path:
-    d = _home() / "duty-board"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    directory = _home() / "duty-board"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
 
 
 def _load_json(path: Path, default: Any) -> Any:
@@ -115,6 +120,11 @@ def _load_json(path: Path, default: Any) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return default
+
+
+def _settings() -> Dict[str, Any]:
+    raw = _load_json(_state_dir() / "settings.json", {})
+    return raw if isinstance(raw, dict) else {}
 
 
 def _clamp_number(raw: Any, default: float, minimum: float, maximum: float, integer: bool = False) -> Any:
@@ -152,20 +162,35 @@ def _runtime_settings() -> Dict[str, Any]:
     }
 
 
-def _settings() -> Dict[str, Any]:
-    return _load_json(_state_dir() / "settings.json", {})
-
-
-def _dismissed() -> Dict[str, Any]:
-    return _load_json(_state_dir() / "dismissed.json", {})
-
-
 def _is_owner(user_id: Any, settings: Optional[Dict[str, Any]] = None) -> bool:
     settings = settings or _runtime_settings()
     owner = str(settings.get("owner") or "")
     if not owner or not settings.get("hide_other_people_content", True):
         return True
     return str(user_id or "") == owner
+
+
+def _schema_snapshot(conn: sqlite3.Connection) -> Dict[str, Set[str]]:
+    """Read the private Hermes schema once for this request."""
+    result: Dict[str, Set[str]] = {}
+    for table in ("sessions", "messages", "session_turn_leases", "async_delegations", "state_meta"):
+        try:
+            result[table] = {str(row[1]) for row in conn.execute(f'PRAGMA table_info("{table}")').fetchall()}
+        except sqlite3.Error:
+            result[table] = set()
+    return result
+
+
+def _missing(schema: Dict[str, Set[str]], table: str, columns: Iterable[str]) -> List[str]:
+    available = schema.get(table, set())
+    if not available:
+        return [f"table {table} not found"]
+    return [f"column {table}.{column} not found" for column in columns if column not in available]
+
+
+def _warn(warnings: List[str], message: str) -> None:
+    if message not in warnings:
+        warnings.append(message)
 
 
 def _connect() -> sqlite3.Connection:
@@ -176,58 +201,87 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+def _dismissed() -> Dict[str, Any]:
+    return _load_json(_state_dir() / "dismissed.json", {})
+
+
+def _row_get(row: Optional[sqlite3.Row], key: str, default: Any = None) -> Any:
+    if row is None:
+        return default
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return default
+
+
+# ── text and Discord helpers ──────────────────────────────────────────────
+
+
 def _text(content: Any) -> str:
     if content is None:
         return ""
-    s = str(content)
-    if s.startswith('[{"') or s.startswith("[{'"):
+    value = str(content)
+    if value.startswith('[{"') or value.startswith("[{'"):
         try:
-            parts = json.loads(s)
-            s = " ".join(p.get("text", "") for p in parts if isinstance(p, dict))
+            parts = json.loads(value)
+            value = " ".join(p.get("text", "") for p in parts if isinstance(p, dict))
         except Exception:
             pass
-    return s
+    return value
 
 
 def _is_internal(content: str, display_kind: Optional[str]) -> bool:
     if display_kind in ("internal_notification", "hidden"):
         return True
-    head = content.lstrip()[:40]
-    return head.startswith(_INTERNAL_PREFIXES)
+    return content.lstrip()[:80].startswith(_INTERNAL_PREFIXES)
 
 
 def _clean_user(content: str) -> str:
-    s = _ORIGIN_BLOCK_RE.sub("", content)
-    s = _META_PREFIX_RE.sub("", s)
-    cut = s.find("<memory-context>")
+    value = _ORIGIN_BLOCK_RE.sub("", content)
+    value = _META_PREFIX_RE.sub("", value)
+    cut = value.find("<memory-context>")
     if cut >= 0:
-        s = s[:cut]
-    return " ".join(s.split())
+        value = value[:cut]
+    return " ".join(value.split())
 
 
-def _clip(s: str, n: int) -> str:
-    s = " ".join((s or "").split())
-    return s if len(s) <= n else s[: n - 1] + "…"
+def _clip(value: str, limit: int) -> str:
+    value = " ".join((value or "").split())
+    return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
-def _tail(s: str, n: int) -> str:
-    s = " ".join((s or "").split())
-    return s if len(s) <= n else "…" + s[-(n - 1):]
+def _tail(value: str, limit: int) -> str:
+    value = " ".join((value or "").split())
+    return value if len(value) <= limit else "…" + value[-(limit - 1):]
 
 
-def _iso_to_epoch(v: Any) -> Optional[float]:
-    if not v:
+def _meaningful_tail(reply: str, n_lines: int = 2) -> str:
+    lines = [line.strip() for line in (reply or "").strip().splitlines()]
+    kept: List[str] = []
+    for line in reversed(lines):
+        if not line or _NOISE_LINE_RE.match(line):
+            continue
+        kept.append(_URL_RE.sub("", line))
+        if len(kept) >= n_lines:
+            break
+    return "\n".join(reversed(kept))
+
+
+def _asks_user(reply: str) -> bool:
+    meaningful = [line for line in (reply or "").splitlines() if line.strip()]
+    return bool(meaningful and _ASK_RE.search(meaningful[-1]))
+
+
+def _iso_to_epoch(value: Any) -> Optional[float]:
+    if not value:
         return None
     try:
-        dt = datetime.fromisoformat(str(v))
+        dt = datetime.fromisoformat(str(value))
         if dt.tzinfo is None:
-            dt = dt.astimezone()  # naive values are local time
+            dt = dt.astimezone()
         return dt.timestamp()
     except Exception:
         return None
-
-
-_DIGITS_RE = re.compile(r"^[0-9]+$")
 
 
 def _numeric_id(value: Any) -> Optional[str]:
@@ -266,33 +320,46 @@ def _discord_links(
     return web, app, web if valid_message else None
 
 
-def _session_meta(row: sqlite3.Row, people: Dict[str, str], message_id: Any = None) -> Dict[str, Any]:
-    origin = {}
+def _origin_for(row: sqlite3.Row) -> Dict[str, Any]:
     try:
-        origin = json.loads(row["origin_json"]) if row["origin_json"] else {}
+        value = json.loads(_row_get(row, "origin_json") or "{}")
+        return value if isinstance(value, dict) else {}
     except Exception:
-        origin = {}
-    source = row["source"]
-    channel = row["thread_id"] or row["chat_id"] or origin.get("thread_id") or origin.get("chat_id")
-    link, app_link, message_link = _discord_links(source, origin, channel, row["chat_type"], message_id)
-    display = row["display_name"] or origin.get("chat_name") or ""
+        return {}
+
+
+def _session_meta(row: sqlite3.Row, people: Dict[str, str], message_id: Any = None) -> Dict[str, Any]:
+    origin = _origin_for(row)
+    source = _row_get(row, "source")
+    display = _row_get(row, "display_name") or origin.get("chat_name") or ""
     where = display
     if source == "discord" and " / " in display:
-        where = " / ".join(display.split(" / ")[1:])  # drop the server name
-    title = row["title"] or (display.split(" / ")[-1] if display else row["id"])
-    if title.startswith("["):  # auto-title captured a gateway metadata prefix
+        where = " / ".join(display.split(" / ")[1:])
+    title = _row_get(row, "title") or (display.split(" / ")[-1] if display else _row_get(row, "id"))
+    if str(title).startswith("["):
         title = display.split(" / ")[-1] if display else title
-    uid = str(row["user_id"] or origin.get("user_id") or "")
-    who = people.get(uid) or origin.get("user_name") or ""
+    user_id = str(_row_get(row, "user_id") or origin.get("user_id") or "")
+    who = people.get(user_id) or origin.get("user_name") or ""
+    channel = _row_get(row, "thread_id") or _row_get(row, "chat_id") or origin.get("thread_id") or origin.get("chat_id")
+    link, app_link, message_link = _discord_links(
+        source, origin, channel, _row_get(row, "chat_type") or origin.get("chat_type"), message_id,
+    )
     return {
-        "session_id": row["id"], "source": source, "title": _clip(title, 60),
-        "where": _clip(where, 60), "link": link, "app_link": app_link, "message_link": message_link, "who": who,
+        "session_id": _row_get(row, "id"),
+        "source": source,
+        "title": _clip(str(title or ""), 60),
+        "where": _clip(str(where or ""), 60),
+        "link": link,
+        "app_link": app_link,
+        "message_link": message_link,
+        "who": str(who or ""),
     }
 
 
-def _recent_messages(conn: sqlite3.Connection, sid: str) -> List[sqlite3.Row]:
+def _recent_messages(conn: sqlite3.Connection, sid: str, columns: Set[str]) -> List[sqlite3.Row]:
+    selected = [column for column in ("id", "role", "content", "timestamp", "display_kind", "platform_message_id") if column in columns]
     return conn.execute(
-        """SELECT id, role, content, timestamp, display_kind, platform_message_id FROM messages
+        f"""SELECT {', '.join(selected)} FROM messages
            WHERE session_id=? AND role IN ('user','assistant')
              AND content IS NOT NULL AND content != ''
            ORDER BY timestamp DESC LIMIT ?""",
@@ -300,69 +367,109 @@ def _recent_messages(conn: sqlite3.Connection, sid: str) -> List[sqlite3.Row]:
     ).fetchall()
 
 
-# ── collectors ─────────────────────────────────────────────────────────────
+# ── collectors ────────────────────────────────────────────────────────────
 
-def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, List[Dict[str, Any]]]:
+_SESSION_COLUMNS = (
+    "id", "source", "user_id", "title", "display_name", "origin_json", "chat_id", "thread_id",
+    "started_at", "ended_at", "last_activity_at", "last_activity_description",
+)
+_MESSAGE_COLUMNS = ("id", "session_id", "role", "content", "timestamp", "display_kind")
+_LEASE_COLUMNS = ("conversation_id", "acquired_at", "expires_at")
+_DELEGATION_COLUMNS = (
+    "delegation_id", "state", "delivery_state", "dispatched_at", "completed_at", "updated_at",
+    "parent_session_id", "origin_session_id", "task_json", "result_json",
+)
+
+
+def _collect_conversations(
+    conn: sqlite3.Connection,
+    now: float,
+    schema: Optional[Dict[str, Set[str]]] = None,
+    warnings: Optional[List[str]] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
+    schema = schema or _schema_snapshot(conn)
+    warnings = warnings if warnings is not None else []
     settings = _runtime_settings()
-    people = {str(k): v for k, v in (settings.get("people") or {}).items()}
-    owner = str(settings.get("owner") or "")
-    # Conversations with other people: show that they exist (title, place, timing) but
-    # never their content — the board is the owner's console, not a transcript viewer.
-    private_others = bool(owner and settings.get("hide_other_people_content", True))
+    people = settings["people"]
     dismissed = _dismissed()
-    leases = {
-        r["conversation_id"]: r for r in conn.execute(
-            "SELECT conversation_id, acquired_at, expires_at FROM session_turn_leases WHERE expires_at > ?", (now,))
-    }
+    sessions_missing = _missing(schema, "sessions", _SESSION_COLUMNS)
+    messages_missing = _missing(schema, "messages", _MESSAGE_COLUMNS)
+    if sessions_missing or messages_missing:
+        for section in ("waiting", "unanswered", "done", "running"):
+            for missing in sessions_missing + messages_missing:
+                _warn(warnings, f"{section}: {missing}")
+        return {"running": [], "waiting": [], "unanswered": [], "done": []}
+
+    lease_missing = _missing(schema, "session_turn_leases", _LEASE_COLUMNS)
+    leases: Dict[str, sqlite3.Row] = {}
+    if lease_missing:
+        for missing in lease_missing:
+            _warn(warnings, f"running: {missing}")
+    else:
+        leases = {
+            row["conversation_id"]: row for row in conn.execute(
+                "SELECT conversation_id, acquired_at, expires_at FROM session_turn_leases WHERE expires_at > ?", (now,)
+            )
+        }
+
     placeholders = ",".join("?" for _ in settings["messaging_sources"])
+    session_select = list(_SESSION_COLUMNS)
+    if "chat_type" in schema["sessions"]:
+        session_select.insert(6, "chat_type")
     rows = conn.execute(
-        f"""SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
-                   started_at, last_activity_at, last_activity_description
-            FROM sessions
+        f"""SELECT {', '.join(session_select)} FROM sessions
             WHERE source IN ({placeholders}) AND ended_at IS NULL
               AND COALESCE(last_activity_at, started_at) > ?""",
         (*settings["messaging_sources"], now - settings["window_days"] * 86400),
     ).fetchall()
 
-    running, waiting, unanswered, done = [], [], [], []
+    running: List[Dict[str, Any]] = []
+    waiting: List[Dict[str, Any]] = []
+    unanswered: List[Dict[str, Any]] = []
+    done: List[Dict[str, Any]] = []
     for row in rows:
         sid = row["id"]
-        msgs = _recent_messages(conn, sid)
+        messages = _recent_messages(conn, sid, schema["messages"])
         last_real: Optional[sqlite3.Row] = None
-        last_user: Optional[Tuple[str, float]] = None
-        message_id = None
+        latest_user: Optional[Tuple[str, float]] = None
+        target_message_id: Optional[str] = None
         last_any_ts = 0.0
-        for m in msgs:
-            content = _text(m["content"])
-            last_any_ts = max(last_any_ts, float(m["timestamp"] or 0))
-            if m["role"] == "assistant" and m["display_kind"] == "hidden":
+        for message in messages:
+            content = _text(_row_get(message, "content"))
+            last_any_ts = max(last_any_ts, float(_row_get(message, "timestamp") or 0))
+            role = _row_get(message, "role")
+            if role == "assistant" and _row_get(message, "display_kind") == "hidden":
                 continue
-            if m["role"] == "user" and _is_internal(content, m["display_kind"]):
+            if role == "user" and _is_internal(content, _row_get(message, "display_kind")):
                 continue
             if last_real is None:
-                last_real = m
-            if m["role"] == "user" and message_id is None and m["platform_message_id"]:
-                message_id = m["platform_message_id"]
-            if m["role"] == "user" and last_user is None:
-                cleaned = _clean_user(content)
-                if cleaned:
-                    last_user = (cleaned, float(m["timestamp"] or 0))
-            if last_real is not None and last_user is not None and message_id is not None:
+                last_real = message
+            if role == "user":
+                if target_message_id is None and _row_get(message, "platform_message_id") not in (None, ""):
+                    target_message_id = str(_row_get(message, "platform_message_id"))
+                if latest_user is None:
+                    cleaned = _clean_user(content)
+                    if cleaned:
+                        latest_user = (cleaned, float(_row_get(message, "timestamp") or 0))
+            if last_real is not None and latest_user is not None:
                 break
-        activity_at = float(row["last_activity_at"] or last_any_ts or row["started_at"] or 0)
-        base = dict(_session_meta(row, people, message_id))
-        uid = str(row["user_id"] or "")
-        base["mine"] = _is_owner(uid, settings)
-        base["ask"] = _clip(last_user[0], 140) if last_user else ""
-        base["ask_at"] = last_user[1] if last_user else None
-        base["activity_at"] = activity_at
+        activity_at = float(_row_get(row, "last_activity_at") or last_any_ts or _row_get(row, "started_at") or 0)
+        meta = _session_meta(row, people, target_message_id)
+        uid = str(_row_get(row, "user_id") or "")
+        base = dict(meta)
+        base.update({
+            "mine": _is_owner(uid, settings),
+            "ask": _clip(latest_user[0], 140) if latest_user else "",
+            "ask_at": latest_user[1] if latest_user else None,
+            "activity_at": activity_at,
+        })
 
         if sid in leases:
-            started = last_user[1] if last_user else float(leases[sid]["acquired_at"] or now)
+            started = latest_user[1] if latest_user else float(leases[sid]["acquired_at"] or now)
             quiet = now - activity_at if activity_at else None
             base.update({
                 "started_at": started,
-                "doing": _clip(row["last_activity_description"] or "", 80),
+                "doing": _clip(_row_get(row, "last_activity_description") or "", 80),
                 "quiet_s": quiet,
                 "stalled": bool(quiet is not None and quiet > settings["stall_seconds"]),
             })
@@ -370,58 +477,97 @@ def _collect_conversations(conn: sqlite3.Connection, now: float) -> Dict[str, Li
             continue
         if last_real is None:
             continue
-        msg_ts = float(last_real["timestamp"] or 0)
-        if last_real["role"] == "user":
-            if now - msg_ts > settings["unanswered_grace_seconds"]:
-                key = f"{sid}:{last_real['id']}"
+        message_ts = float(_row_get(last_real, "timestamp") or 0)
+        if _row_get(last_real, "role") == "user":
+            if now - message_ts > settings["unanswered_grace_seconds"]:
+                key = f"{sid}:{_row_get(last_real, 'id')}"
                 if key not in dismissed:
-                    base.update({"since": msg_ts, "dismiss_key": key})
+                    base.update({"since": message_ts, "dismiss_key": key})
                     unanswered.append(base)
             continue
-        reply = _text(last_real["content"])
-        key = f"{sid}:{last_real['id']}"
+        reply = _text(_row_get(last_real, "content"))
+        key = f"{sid}:{_row_get(last_real, 'id')}"
         tail = _meaningful_tail(reply)
-        base.update({"since": msg_ts, "reply_tail": _tail(_strip_md(tail or reply), 180), "dismiss_key": key})
-        if _ASK_RE.search(tail):
+        base.update({
+            "since": message_ts,
+            "reply_tail": _tail(_strip_md(tail or reply), 180),
+            "dismiss_key": key,
+        })
+        if _asks_user(tail):
             if key not in dismissed:
                 waiting.append(base)
-        elif now - msg_ts < settings["recent_done_hours"] * 3600:
+        elif now - message_ts < settings["recent_done_hours"] * 3600:
             base["promised"] = bool(_PROMISE_RE.search(_meaningful_tail(reply, 3)))
             done.append(base)
 
-    if private_others:
-        # Other people's threads are not the owner's to-do: drop them from the
-        # waiting/answered lists, and keep only an anonymous presence while running.
-        waiting = [x for x in waiting if x["mine"]]
-        unanswered = [x for x in unanswered if x["mine"]]
-        done = [x for x in done if x["mine"]]
+    if settings["hide_other_people_content"] and settings["owner"]:
+        waiting = [item for item in waiting if item["mine"]]
+        unanswered = [item for item in unanswered if item["mine"]]
+        done = [item for item in done if item["mine"]]
         for item in running:
             if not item["mine"]:
                 item.update({
-                    "title": f"{item.get('who') or '其他人'}的对话", "where": "", "ask": "",
-                    "doing": "", "link": None, "app_link": None, "message_link": None, "private": True,
+                    "title": "", "where": "", "ask": "", "doing": "", "link": None,
+                    "app_link": None, "message_link": None, "private": True,
                 })
 
-    running.sort(key=lambda x: x.get("started_at") or 0)
-    waiting.sort(key=lambda x: x["since"])            # oldest wait first
-    unanswered.sort(key=lambda x: x["since"])
-    done.sort(key=lambda x: x["since"], reverse=True)
+    running.sort(key=lambda item: item.get("started_at") or 0)
+    waiting.sort(key=lambda item: item["since"])
+    unanswered.sort(key=lambda item: item["since"])
+    done.sort(key=lambda item: item["since"], reverse=True)
     return {"running": running, "waiting": waiting, "unanswered": unanswered, "done": done[:15]}
 
 
-def _session_title(conn: sqlite3.Connection, sid: Optional[str], people: Dict[str, str]) -> Dict[str, Any]:
-    if not sid:
+def _session_title(conn: sqlite3.Connection, sid: Optional[str], people: Dict[str, str], schema: Dict[str, Set[str]]) -> Dict[str, Any]:
+    if not sid or not schema.get("sessions"):
         return {}
-    row = conn.execute(
-        """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type
-           FROM sessions WHERE id=?""", (sid,)).fetchone()
+    required = ("id", "source", "user_id", "title", "display_name", "origin_json", "chat_id", "thread_id")
+    if _missing(schema, "sessions", required):
+        return {}
+    selected = list(required)
+    if "chat_type" in schema["sessions"]:
+        selected.insert(6, "chat_type")
+    row = conn.execute(f"SELECT {', '.join(selected)} FROM sessions WHERE id=?", (sid,)).fetchone()
     return _session_meta(row, people) if row else {}
 
 
-def _collect_delegations(conn: sqlite3.Connection, now: float) -> Dict[str, List[Dict[str, Any]]]:
-    people = {str(k): v for k, v in (_runtime_settings().get("people") or {}).items()}
+def _load_task(raw: Optional[str]) -> Dict[str, Any]:
+    try:
+        value = json.loads(raw) if raw else {}
+        return value if isinstance(value, dict) else {}
+    except Exception:
+        return {}
+
+
+def _result_summary(raw: Optional[str]) -> str:
+    try:
+        value = json.loads(raw) if raw else {}
+    except Exception:
+        return ""
+    if isinstance(value, dict):
+        results = value.get("results") or []
+        parts = [str(item.get("summary") or "") for item in results if isinstance(item, dict)]
+        return " / ".join(part for part in parts if part) or str(value.get("summary") or "")
+    return ""
+
+
+def _collect_delegations(
+    conn: sqlite3.Connection,
+    now: float,
+    schema: Optional[Dict[str, Set[str]]] = None,
+    warnings: Optional[List[str]] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
+    schema = schema or _schema_snapshot(conn)
+    warnings = warnings if warnings is not None else []
+    missing = _missing(schema, "async_delegations", _DELEGATION_COLUMNS)
+    if missing:
+        for item in missing:
+            _warn(warnings, f"delegations: {item}")
+        return {"running": [], "dropped": []}
+    settings = _runtime_settings()
     dismissed = _dismissed()
-    running, dropped = [], []
+    running: List[Dict[str, Any]] = []
+    dropped: List[Dict[str, Any]] = []
     rows = conn.execute(
         """SELECT delegation_id, state, delivery_state, dispatched_at, completed_at, updated_at,
                   parent_session_id, origin_session_id, task_json, result_json
@@ -430,26 +576,29 @@ def _collect_delegations(conn: sqlite3.Connection, now: float) -> Dict[str, List
            ORDER BY dispatched_at DESC""",
         (now - DROPPED_LOOKBACK_DAYS * 86400,),
     ).fetchall()
-    for r in rows:
-        task = _load_task(r["task_json"])
+    for row in rows:
+        task = _load_task(row["task_json"])
         goal = task.get("goal") or ""
         goals = task.get("goals") or []
-        item = {
-            "id": r["delegation_id"],
-            "goal": _clip(goal, 140),
+        user_id = task.get("user_id")
+        item: Dict[str, Any] = {
+            "id": row["delegation_id"], "goal": _clip(str(goal), 140),
             "count": len(goals) if isinstance(goals, list) and goals else 1,
-            "model": task.get("model") or "",
-            "dispatched_at": r["dispatched_at"],
-            "session": _session_title(conn, r["parent_session_id"] or r["origin_session_id"], people),
+            "model": task.get("model") or "", "dispatched_at": row["dispatched_at"],
+            "session": _session_title(conn, row["parent_session_id"] or row["origin_session_id"], settings["people"], schema),
         }
-        if not _is_owner(task.get("user_id")):
-            item.update({"goal": "（其他人的后台任务）", "model": "", "session": {}})
-        if r["state"] == "running":
+        if not _is_owner(user_id, settings):
+            item.update({
+                "private": True,
+                "who": settings["people"].get(str(user_id), task.get("user_name") or ""),
+                "goal": "", "model": "", "session": {},
+            })
+        if row["state"] == "running":
             running.append(item)
-        elif r["delegation_id"] not in dismissed:
-            item["completed_at"] = r["completed_at"] or r["updated_at"]
-            item["summary"] = _clip(_strip_md(_result_summary(r["result_json"])), 200)
-            item["dismiss_key"] = r["delegation_id"]
+        elif row["delegation_id"] not in dismissed:
+            item["completed_at"] = row["completed_at"] or row["updated_at"]
+            item["summary"] = _clip(_strip_md(_result_summary(row["result_json"])), 200)
+            item["dismiss_key"] = row["delegation_id"]
             dropped.append(item)
     return {"running": running, "dropped": dropped}
 
@@ -461,134 +610,174 @@ def _strip_md(text: str) -> str:
     return _MD_RE.sub("", text or "")
 
 
-def _load_task(raw: Optional[str]) -> Dict[str, Any]:
-    try:
-        d = json.loads(raw) if raw else {}
-        return d if isinstance(d, dict) else {}
-    except Exception:
-        return {}
-
-
-def _result_summary(raw: Optional[str]) -> str:
-    try:
-        d = json.loads(raw) if raw else {}
-    except Exception:
-        return ""
-    if isinstance(d, dict):
-        res = d.get("results") or []
-        parts = [str(x.get("summary") or "") for x in res if isinstance(x, dict)]
-        return " / ".join(p for p in parts if p) or str(d.get("summary") or "")
-    return ""
-
-
 def _collect_cron(now: float) -> Dict[str, Any]:
     raw = _load_json(_home() / "cron" / "jobs.json", {})
     jobs = raw.get("jobs", []) if isinstance(raw, dict) else (raw or [])
-    enabled = [j for j in jobs if j.get("enabled")]
-    problems, running, upcoming = [], [], []
-    for j in enabled:
-        nxt = _iso_to_epoch(j.get("next_run_at"))
-        last = _iso_to_epoch(j.get("last_run_at"))
-        item = {
-            "id": j.get("id"), "name": _clip(j.get("name") or j.get("id") or "", 48),
-            "schedule": j.get("schedule_display") or (j.get("schedule") or {}).get("display") or "",
-            "next_at": nxt, "last_at": last, "last_status": j.get("last_status"),
-            "deliver": j.get("deliver") or "", "script_only": bool(j.get("no_agent")),
+    if not isinstance(jobs, list):
+        jobs = []
+    enabled = [job for job in jobs if isinstance(job, dict) and job.get("enabled")]
+    problems: List[Dict[str, Any]] = []
+    running: List[Dict[str, Any]] = []
+    upcoming: List[Dict[str, Any]] = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        if not job.get("enabled") and job.get("state") != "paused":
+            continue
+        next_at = _iso_to_epoch(job.get("next_run_at"))
+        last_at = _iso_to_epoch(job.get("last_run_at"))
+        item: Dict[str, Any] = {
+            "id": job.get("id"), "name": _clip(job.get("name") or job.get("id") or "", 48),
+            "schedule": job.get("schedule_display") or (job.get("schedule") or {}).get("display") or "",
+            "next_at": next_at, "last_at": last_at, "last_status": job.get("last_status"),
+            "deliver": job.get("deliver") or "", "script_only": bool(job.get("no_agent")),
         }
-        reasons = []
-        if j.get("fire_claim"):
+        reasons: List[Dict[str, Any]] = []
+        if job.get("fire_claim"):
             running.append(item)
-        if j.get("last_status") == "error":
-            err = (j.get("last_error") or "").strip().splitlines()
-            reasons.append("报错：" + _clip(err[-1] if err else "", 90))
-        if j.get("last_delivery_error"):
-            reasons.append("投递失败：" + _clip(str(j.get("last_delivery_error")), 80))
-        if j.get("state") != "scheduled":
-            reasons.append(f"状态 {j.get('state')}")
-        if nxt and nxt < now - 600 and not j.get("fire_claim"):
-            reasons.append("到点未跑")
+        if job.get("last_status") == "error":
+            errors = (job.get("last_error") or "").strip().splitlines()
+            reasons.append({"code": "last_error", "detail": _clip(errors[-1] if errors else "", 90)})
+        if job.get("last_delivery_error"):
+            reasons.append({"code": "delivery_error", "detail": _clip(str(job.get("last_delivery_error")), 80)})
+        if job.get("state") != "scheduled":
+            reasons.append({"code": "state", "detail": str(job.get("state") or "")})
+        if next_at and next_at < now - 600 and not job.get("fire_claim"):
+            reasons.append({"code": "overdue"})
         if reasons:
             item["reasons"] = reasons
             problems.append(item)
-        elif nxt:
+        elif next_at and job.get("enabled"):
             upcoming.append(item)
-    upcoming.sort(key=lambda x: x["next_at"] or 0)
+    upcoming.sort(key=lambda item: item["next_at"] or 0)
     return {
         "enabled": len(enabled),
-        "paused": sum(1 for j in jobs if not j.get("enabled") and j.get("state") == "paused"),
+        "paused": sum(1 for job in jobs if not job.get("enabled") and job.get("state") == "paused"),
         "problems": problems, "running": running, "upcoming": upcoming[:8],
     }
 
 
-def _collect_goals(conn: sqlite3.Connection, now: float) -> Dict[str, Any]:
-    people = {str(k): v for k, v in (_runtime_settings().get("people") or {}).items()}
-    live, stale = [], 0
-    for r in conn.execute("SELECT key, value FROM state_meta WHERE key LIKE 'goal:%'").fetchall():
+def _collect_goals(
+    conn: sqlite3.Connection,
+    now: float,
+    schema: Optional[Dict[str, Set[str]]] = None,
+    warnings: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    schema = schema or _schema_snapshot(conn)
+    warnings = warnings if warnings is not None else []
+    state_missing = _missing(schema, "state_meta", ("key", "value"))
+    session_missing = _missing(schema, "sessions", ("id", "source", "user_id", "title", "display_name", "origin_json", "chat_id", "thread_id", "started_at", "last_activity_at"))
+    if state_missing or session_missing:
+        for missing in state_missing + session_missing:
+            _warn(warnings, f"goals: {missing}")
+        return {"items": [], "stale": 0}
+    settings = _runtime_settings()
+    live: List[Dict[str, Any]] = []
+    stale = 0
+    for meta in conn.execute("SELECT key, value FROM state_meta WHERE key LIKE 'goal:%'").fetchall():
         try:
-            g = json.loads(r["value"])
+            goal = json.loads(meta["value"])
         except Exception:
             continue
-        if g.get("status") not in ("active", "paused"):
+        if not isinstance(goal, dict) or goal.get("status") not in ("active", "paused"):
             continue
-        sid = r["key"].split(":", 1)[1]
-        srow = conn.execute(
-            """SELECT id, source, user_id, title, display_name, origin_json, chat_id, thread_id, chat_type,
-                      COALESCE(last_activity_at, started_at) AS act FROM sessions WHERE id=?""", (sid,)).fetchone()
-        if srow is None or srow["source"] not in _runtime_settings()["messaging_sources"]:
+        sid = meta["key"].split(":", 1)[1]
+        selected = ["id", "source", "user_id", "title", "display_name", "origin_json", "chat_id", "thread_id", "started_at", "last_activity_at"]
+        if "chat_type" in schema["sessions"]:
+            selected.insert(6, "chat_type")
+        row = conn.execute(
+            f"SELECT {', '.join(selected)}, COALESCE(last_activity_at, started_at) AS act FROM sessions WHERE id=?", (sid,)
+        ).fetchone()
+        if row is None or row["source"] not in settings["messaging_sources"]:
             continue
-        if (srow["act"] or 0) < now - _runtime_settings()["goal_lookback_days"] * 86400:
+        if (row["act"] or 0) < now - settings["goal_lookback_days"] * 86400:
             stale += 1
             continue
-        if not _is_owner(srow["user_id"]):
+        if not _is_owner(row["user_id"], settings):
             continue
         live.append({
-            "goal": _clip(g.get("goal") or "", 120), "status": g.get("status"),
-            "turns": g.get("turns_used"), "max_turns": g.get("max_turns"),
-            "reason": _clip(g.get("last_reason") or g.get("paused_reason") or "", 120),
-            "session": _session_meta(srow, people), "activity_at": srow["act"],
+            "goal": _clip(goal.get("goal") or "", 120), "status": goal.get("status"),
+            "turns": goal.get("turns_used"), "max_turns": goal.get("max_turns"),
+            "reason": _clip(goal.get("last_reason") or goal.get("paused_reason") or "", 120),
+            "session": _session_meta(row, settings["people"]), "activity_at": row["act"],
         })
-    live.sort(key=lambda x: x["activity_at"] or 0, reverse=True)
+    live.sort(key=lambda item: item["activity_at"] or 0, reverse=True)
     return {"items": live, "stale": stale}
 
 
 def _collect_gateway() -> Dict[str, Any]:
-    st = _load_json(_home() / "gateway_state.json", {})
+    state = _load_json(_home() / "gateway_state.json", {})
+    if not isinstance(state, dict):
+        state = {}
     platforms = []
-    for name, p in (st.get("platforms") or {}).items():
-        if isinstance(p, dict):
-            platforms.append({"name": name, "state": p.get("state"), "error": p.get("error_message")})
-    return {"state": st.get("gateway_state"), "version": st.get("code_version"), "platforms": platforms}
+    for name, platform in (state.get("platforms") or {}).items():
+        if isinstance(platform, dict):
+            platforms.append({"name": name, "state": platform.get("state"), "error": platform.get("error_message")})
+    return {"state": state.get("gateway_state"), "version": state.get("code_version"), "platforms": platforms}
+
+
+def _run_collector(name: str, fn: Callable[[], Any], default: Any, warnings: List[str]) -> Any:
+    try:
+        return fn()
+    except Exception as exc:  # noqa: BLE001 - one broken section must not take down the board
+        logger.exception("Duty Board %s collector failed", name)
+        _warn(warnings, f"{name}: collector failed ({exc})")
+        return default
 
 
 def _build(now: float) -> Dict[str, Any]:
-    conn = _connect()
+    warnings: List[str] = []
+    empty_conversations = {"running": [], "waiting": [], "unanswered": [], "done": []}
+    empty_delegations = {"running": [], "dropped": []}
+    conn: Optional[sqlite3.Connection] = None
+    schema: Dict[str, Set[str]] = {}
     try:
-        conv = _collect_conversations(conn, now)
-        dele = _collect_delegations(conn, now)
-        goals = _collect_goals(conn, now)
+        conn = _connect()
+        schema = _schema_snapshot(conn)
+        conversations = _run_collector(
+            "conversations", lambda: _collect_conversations(conn, now, schema, warnings), empty_conversations, warnings,
+        )
+        delegations = _run_collector(
+            "delegations", lambda: _collect_delegations(conn, now, schema, warnings), empty_delegations, warnings,
+        )
+        goals = _run_collector(
+            "goals", lambda: _collect_goals(conn, now, schema, warnings), {"items": [], "stale": 0}, warnings,
+        )
+    except Exception as exc:  # noqa: BLE001 - a missing/corrupt DB still yields a useful page
+        logger.exception("Duty Board state database collector failed")
+        _warn(warnings, f"state.db: collector failed ({exc})")
+        conversations, delegations, goals = empty_conversations, empty_delegations, {"items": [], "stale": 0}
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
+    cron = _run_collector("cron", lambda: _collect_cron(now), {"enabled": 0, "paused": 0, "problems": [], "running": [], "upcoming": []}, warnings)
+    gateway = _run_collector("gateway", _collect_gateway, {"state": None, "version": None, "platforms": []}, warnings)
     return {
+        "schema_version": 1,
+        "plugin_version": __version__,
         "generated_at": now,
-        "gateway": _collect_gateway(),
-        "conversations": conv,
-        "delegations": dele,
-        "cron": _collect_cron(now),
+        "warnings": warnings,
+        "gateway": gateway,
+        "conversations": conversations,
+        "delegations": delegations,
+        "cron": cron,
         "goals": goals,
     }
 
 
 # ── routes ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/summary")
 def summary() -> Dict[str, Any]:
     now = time.time()
+    home = str(_home())
     with _cache_lock:
-        if _cache["data"] is not None and now - _cache["at"] < CACHE_TTL_S:
+        if _cache["data"] is not None and _cache["home"] == home and now - _cache["at"] < CACHE_TTL_S:
             return _cache["data"]
     data = _build(now)
     with _cache_lock:
-        _cache.update(at=now, data=data)
+        _cache.update(at=now, data=data, home=home)
     return data
 
 
@@ -609,10 +798,10 @@ def dismiss(body: DismissBody) -> Dict[str, Any]:
     else:
         data[key] = time.time()
     cutoff = time.time() - 30 * 86400
-    data = {k: v for k, v in data.items() if isinstance(v, (int, float)) and v > cutoff}
+    data = {k: value for k, value in data.items() if isinstance(value, (int, float)) and value > cutoff}
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=0), encoding="utf-8")
     tmp.replace(path)
     with _cache_lock:
-        _cache.update(at=0.0, data=None)
+        _cache.update(at=0.0, data=None, home=None)
     return {"ok": True}
