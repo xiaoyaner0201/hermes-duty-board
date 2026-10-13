@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover - only outside a Hermes runtime
     get_hermes_home = None  # type: ignore[assignment]
 
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -187,16 +187,39 @@ def _schema_snapshot(conn: sqlite3.Connection) -> Dict[str, Set[str]]:
     return result
 
 
-def _missing(schema: Dict[str, Set[str]], table: str, columns: Iterable[str]) -> List[str]:
+def _missing(schema: Dict[str, Set[str]], table: str, columns: Iterable[str]) -> List[Dict[str, str]]:
     available = schema.get(table, set())
     if not available:
-        return [f"table {table} not found"]
-    return [f"column {table}.{column} not found" for column in columns if column not in available]
+        return [{"code": "missingTable", "detail": table}]
+    return [{"code": "missingColumn", "detail": f"{table}.{column}"} for column in columns if column not in available]
 
 
-def _warn(warnings: List[str], message: str) -> None:
-    if message not in warnings:
-        warnings.append(message)
+_ISSUE_TEXT = {
+    "missingTable": "table {detail} not found",
+    "missingColumn": "column {detail} not found",
+    "collectorFailed": "collector failed ({detail})",
+}
+
+
+class _Issues(list):
+    """Structured section problems; the UI localises them from ``code``."""
+
+    def add(self, section: str, issue: Dict[str, str]) -> None:
+        item = {"section": section, "code": issue["code"], "detail": str(issue.get("detail", ""))}
+        if item not in self:
+            self.append(item)
+
+    def as_text(self) -> List[str]:
+        return [f"{i['section']}: " + _ISSUE_TEXT[i["code"]].format(detail=i["detail"]) for i in self]
+
+
+def _warn(warnings: List[Dict[str, str]], section: str, issue: Dict[str, str]) -> None:
+    if isinstance(warnings, _Issues):
+        warnings.add(section, issue)
+        return
+    item = {"section": section, "code": issue["code"], "detail": str(issue.get("detail", ""))}
+    if item not in warnings:
+        warnings.append(item)
 
 
 def _connect() -> sqlite3.Connection:
@@ -419,7 +442,7 @@ def _collect_conversations(
     conn: sqlite3.Connection,
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
-    warnings: Optional[List[str]] = None,
+    warnings: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
@@ -431,14 +454,14 @@ def _collect_conversations(
     if sessions_missing or messages_missing:
         for section in ("waiting", "unanswered", "done", "running"):
             for missing in sessions_missing + messages_missing:
-                _warn(warnings, f"{section}: {missing}")
+                _warn(warnings, section, missing)
         return {"running": [], "waiting": [], "unanswered": [], "done": []}
 
     lease_missing = _missing(schema, "session_turn_leases", _LEASE_COLUMNS)
     leases: Dict[str, sqlite3.Row] = {}
     if lease_missing:
         for missing in lease_missing:
-            _warn(warnings, f"running: {missing}")
+            _warn(warnings, "running", missing)
     else:
         leases = {
             row["conversation_id"]: row for row in conn.execute(
@@ -595,14 +618,14 @@ def _collect_delegations(
     conn: sqlite3.Connection,
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
-    warnings: Optional[List[str]] = None,
+    warnings: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
     missing = _missing(schema, "async_delegations", _DELEGATION_COLUMNS)
     if missing:
         for item in missing:
-            _warn(warnings, f"delegations: {item}")
+            _warn(warnings, "delegations", item)
         return {"running": [], "dropped": []}
     settings = _runtime_settings()
     dismissed = _dismissed()
@@ -703,7 +726,7 @@ def _collect_goals(
     conn: sqlite3.Connection,
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
-    warnings: Optional[List[str]] = None,
+    warnings: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
@@ -711,7 +734,7 @@ def _collect_goals(
     session_missing = _missing(schema, "sessions", ("id", "source", "user_id", "title", "display_name", "origin_json", "chat_id", "thread_id", "started_at", "last_activity_at"))
     if state_missing or session_missing:
         for missing in state_missing + session_missing:
-            _warn(warnings, f"goals: {missing}")
+            _warn(warnings, "goals", missing)
         return {"items": [], "stale": 0}
     settings = _runtime_settings()
     live: List[Dict[str, Any]] = []
@@ -758,17 +781,17 @@ def _collect_gateway() -> Dict[str, Any]:
     return {"state": state.get("gateway_state"), "version": state.get("code_version"), "platforms": platforms}
 
 
-def _run_collector(name: str, fn: Callable[[], Any], default: Any, warnings: List[str]) -> Any:
+def _run_collector(name: str, fn: Callable[[], Any], default: Any, warnings: List[Dict[str, str]]) -> Any:
     try:
         return fn()
     except Exception as exc:  # noqa: BLE001 - one broken section must not take down the board
         logger.exception("Duty Board %s collector failed", name)
-        _warn(warnings, f"{name}: collector failed ({exc})")
+        _warn(warnings, name, {"code": "collectorFailed", "detail": type(exc).__name__})
         return default
 
 
 def _build(now: float) -> Dict[str, Any]:
-    warnings: List[str] = []
+    warnings = _Issues()
     empty_conversations = {"running": [], "waiting": [], "unanswered": [], "done": []}
     empty_delegations = {"running": [], "dropped": []}
     conn: Optional[sqlite3.Connection] = None
@@ -787,7 +810,7 @@ def _build(now: float) -> Dict[str, Any]:
         )
     except Exception as exc:  # noqa: BLE001 - a missing/corrupt DB still yields a useful page
         logger.exception("Duty Board state database collector failed")
-        _warn(warnings, f"state.db: collector failed ({exc})")
+        _warn(warnings, "database", {"code": "collectorFailed", "detail": type(exc).__name__})
         conversations, delegations, goals = empty_conversations, empty_delegations, {"items": [], "stale": 0}
     finally:
         if conn is not None:
@@ -795,10 +818,11 @@ def _build(now: float) -> Dict[str, Any]:
     cron = _run_collector("cron", lambda: _collect_cron(now), {"enabled": 0, "paused": 0, "problems": [], "running": [], "upcoming": []}, warnings)
     gateway = _run_collector("gateway", _collect_gateway, {"state": None, "version": None, "platforms": []}, warnings)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "plugin_version": __version__,
         "generated_at": now,
-        "warnings": warnings,
+        "issues": list(warnings),
+        "warnings": warnings.as_text(),
         "gateway": gateway,
         "conversations": conversations,
         "delegations": delegations,

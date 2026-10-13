@@ -1,7 +1,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-node_modules/
+node_modules
 dev/harness/sdk.js
 dev/harness/theme.css
 dev/out/
