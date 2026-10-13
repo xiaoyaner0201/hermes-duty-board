@@ -24,20 +24,20 @@ Duty Board puts all of it on one page that refreshes every five seconds. Each co
 | Section | What you see |
 |---|---|
 | **Waiting on you** | Conversations whose last reply asks you a question or waits for your decision, oldest first, with what was asked and what started it. |
-| **No reply yet** | Conversations where you wrote last and no turn is running. These usually point to a dropped message. |
+| **You wrote, but no reply arrived** | Conversations where you wrote last and no turn is running. These usually point to a dropped message. Shown at the top of *Waiting on you*. |
 | **Running** | Turns in progress right now: elapsed time, what the agent is doing ("calling a model", "running terminal"), and a warning when a turn has gone quiet for 10 minutes. |
 | **Background jobs** | Running `delegate_task` work. Also lists finished delegations whose result could not be delivered because the parent session was switched. |
 | **Scheduled jobs** | Cron jobs that errored, failed delivery, are paused or overdue, plus a timeline of what runs next. |
-| **Recently finished** | Replies from the last 24 hours that are reports rather than questions. Flags any reply that promised to come back later. |
+| **Recently completed** | Replies from the last 24 hours that are reports rather than questions. Flags any reply that promised to come back later. |
 | **Standing goals** | Active and paused `/goal`s with turn budget and the judge's last reason. |
 
-**Jump straight in.** Cards in *Waiting on you*, *No reply yet* and *Running* have an **Open in Discord** button. It opens that thread in the Discord desktop app through `discord://`, scrolled to your message when the ID is known. A switch in the header lets you open links in the browser instead.
+**Jump straight in.** Cards in *Waiting on you* and *Running* have an **Open in Discord** button. It opens that thread in the Discord desktop app through `discord://`, scrolled to your message when the ID is known. A switch in the header lets you open links in the browser instead.
 
 **Clear it when done.** *Seen* hides a card until that conversation gets a new message.
 
 ## Requirements
 
-- Hermes Agent **0.21 or newer** with the web dashboard (`hermes dashboard`).
+- Hermes Agent **0.21.1 or newer** with the web dashboard (`hermes dashboard`).
 - Works with any messaging platform Hermes supports. Deep links are Discord-only for now; other platforms show their conversations without a jump button.
 
 ## Install
@@ -72,12 +72,12 @@ Everything is optional. To change the defaults, create `~/.hermes/duty-board/set
 | Key | Default | Meaning |
 |---|---|---|
 | `owner` | unset | Platform user ID whose conversations count as yours. If unset, every conversation counts and nothing is hidden. Also settable via `DUTY_BOARD_OWNER`. |
-| `hide_other_people_content` | `true` | When `owner` is set, other people's conversations are left out of *Waiting* and *Finished*. Their running turns show only as "Conversation with …", with no content and no link. |
+| `hide_other_people_content` | `true` | When `owner` is set, other people's conversations are left out of *Waiting on you* and *Recently completed*. Their running turns and background jobs show only as "Conversation with …", with no content and no link. |
 | `people` | `{}` | Display labels for user IDs. Without one, the platform user name is shown. |
 | `window_days` | `7` | How far back to look for conversations. |
 | `stall_seconds` | `600` | How long a running turn can be silent before it is flagged. |
-| `unanswered_grace_seconds` | `180` | How long your last message can go unanswered before it is listed under *No reply yet*. |
-| `recent_done_hours` | `24` | Window for *Recently finished*. |
+| `unanswered_grace_seconds` | `180` | How long your last message can go unanswered before it is listed as *You wrote, but no reply arrived*. |
+| `recent_done_hours` | `24` | Window for *Recently completed*. |
 | `goal_lookback_days` | `14` | Older goals are counted, not listed. |
 
 ## How "waiting on you" is decided
