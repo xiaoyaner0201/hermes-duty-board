@@ -1,40 +1,60 @@
-"""Local acceptance harness: serves the real plugin bundle + the real plugin API
-(read-only against live state.db) on 127.0.0.1 so the page can be rendered and
-screenshotted without the authenticated production Dashboard."""
+"""Serve the checked-in dashboard plugin for local browser acceptance."""
+from __future__ import annotations
+
+import argparse
 import importlib.util
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-HERE = Path(__file__).parent
+
+HERE = Path(__file__).resolve().parent
 PLUGIN = Path(__file__).resolve().parents[2] / "dashboard"
 
-spec = importlib.util.spec_from_file_location("duty_board_api", PLUGIN / "plugin_api.py")
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
 
-app = FastAPI()
-app.include_router(mod.router, prefix="/api/plugins/duty-board")
-app.mount("/plugin", StaticFiles(directory=PLUGIN / "dist"), name="plugin")
-
-
-@app.get("/")
-def index():
-    return FileResponse(HERE / "index.html")
+def load_api():
+    spec = importlib.util.spec_from_file_location("duty_board_harness_api", PLUGIN / "plugin_api.py")
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load dashboard/plugin_api.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-@app.get("/sdk.js")
-def sdk():
-    return FileResponse(HERE / "sdk.js")
+def create_app():
+    module = load_api()
+    app = FastAPI()
+    app.include_router(module.router, prefix="/api/plugins/duty-board")
+    app.mount("/plugin", StaticFiles(directory=PLUGIN / "dist"), name="plugin")
+
+    @app.get("/")
+    def index():
+        return FileResponse(HERE / "index.html")
+
+    @app.get("/sdk.js")
+    def sdk():
+        return FileResponse(HERE / "sdk.js")
+
+    @app.get("/theme.css")
+    def theme():
+        return FileResponse(HERE / "theme.css")
+
+    return app
 
 
-@app.get("/theme.css")
-def theme():
-    return FileResponse(HERE / "theme.css")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Serve the Duty Board plugin locally")
+    parser.add_argument("--port", type=int, default=9188)
+    parser.add_argument("--fixture", type=Path, help="synthetic Hermes home to expose as HERMES_HOME")
+    args = parser.parse_args()
+    if args.fixture:
+        os.environ["HERMES_HOME"] = str(args.fixture.expanduser().resolve())
+    uvicorn.run(create_app(), host="127.0.0.1", port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=9188, log_level="warning")
+    main()
