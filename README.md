@@ -103,6 +103,13 @@ The tab speaks every language the Hermes dashboard ships, 17 in all: English, ç®
 
 Translations live in `dashboard/i18n/<locale>.json`, with `en.json` as the source of truth. Corrections from native speakers are very welcome; see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 
+<details>
+<summary>Right-to-left: the same board in Arabic</summary>
+
+![Duty Board in Arabic](docs/screenshot.ar.png)
+
+</details>
+
 ## Development
 
 ```bash
