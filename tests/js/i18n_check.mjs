@@ -12,6 +12,7 @@
 //   - no empty strings, and no leftover English in a non-English catalog
 //     beyond an allow-list of brand names and identical-by-design strings.
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 // Every locale the Hermes dashboard ships (web/src/i18n/types.ts).
 export const SUPPORTED = ["en", "zh", "zh-hant", "ja", "de", "es", "fr", "tr", "uk", "af", "ko", "it", "ga", "pt", "ru", "hu", "ar"];
@@ -19,7 +20,8 @@ const PLURAL_KEYS = new Set(["zero", "one", "two", "few", "many", "other"]);
 // Strings that may legitimately equal the English text.
 const SAME_AS_EN_OK = new Set(["appTitle", "web"]);
 
-const dir = new URL("../../dashboard/i18n/", import.meta.url);
+// I18N_DIR lets translators validate a scratch directory that also holds en.json.
+const dir = process.env.I18N_DIR ? pathToFileURL(process.env.I18N_DIR.replace(/\/?$/, "/")) : new URL("../../dashboard/i18n/", import.meta.url);
 const read = (locale) => JSON.parse(fs.readFileSync(new URL(`${locale}.json`, dir), "utf8"));
 const en = read("en");
 

@@ -35,15 +35,24 @@ jobs:
         run: python -m pytest -q
 
   frontend:
-    name: Frontend bundle
+    name: Frontend bundle and translations
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # Intl.DurationFormat ships in Node 23+; the bundle falls back without it,
+          # but the render check should exercise the path modern browsers take.
+          node-version: "24"
       - name: Syntax check
         run: node --check dashboard/dist/index.js
-      - name: Locale catalogs complete
+      - name: Bundle carries the current catalogs
+        run: node tools/build_i18n.mjs --check
+      - name: Catalogs complete (keys, placeholders, plural forms)
         run: node tests/js/i18n_check.mjs
+      - name: Install React for the render check
+        working-directory: tests/js
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Render every locale with React
+        run: node tests/js/render_check.mjs

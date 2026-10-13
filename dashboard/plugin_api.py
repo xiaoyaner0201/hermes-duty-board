@@ -73,7 +73,7 @@ _ORIGIN_BLOCK_RE = re.compile(
 # questions, MEDIA lines, and footnotes therefore do not turn a report into a
 # waiting card.
 _ASK_RE = re.compile(
-    r"？|\?(?=\s|$|[*_」”』）)\]])|要不要我|要不要先|需不需要我|是否需要|你定|你来定|拍板|请确认|你确认|确认要|"
+    r"？|؟|\?(?=\s|$|[*_」”』）)\]»«“’\"'])|要不要我|要不要先|需不需要我|是否需要|你定|你来定|拍板|请确认|你确认|确认要|"
     r"等你|说一声|告诉我|回一句|你选|还是你|可以吗|好吗|行吗|你看呢|你觉得|"
     r"should I|do you want|let me know|your call|confirm|shall I|which one|would you like|"
     r"しますか|よろしいですか|教えてください|どうしますか|確認してください",

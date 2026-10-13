@@ -38,6 +38,28 @@ def test_waiting_detection_localized_and_noise(client, home):
     assert waiting["waiting-en"]["app_link"].startswith("discord://-/channels/")
 
 
+def test_waiting_detection_covers_other_scripts(client, home):
+    now = float((home / "fixture-now").read_text())
+    cases = {
+        "ar": "هل أتابع النشر؟",
+        "fr": "Voulez-vous que je continue ?",
+        "es": "¿Sigo con el despliegue?",
+        "ru": "Продолжить развёртывание?",
+        "ko": "배포를 계속할까요?",
+        "de-quote": "Soll ich »fertig?« schreiben",
+        "fr-report": "Rapport terminé. Voir https://example.test/a?b=1",
+    }
+    for index, (name, reply) in enumerate(cases.items()):
+        sid = f"script-{name}"
+        add_session(home, sid, title=name, now=now)
+        add_message(home, sid, "user", "Go", timestamp=now - 120, platform_message_id=str(9100 + index))
+        add_message(home, sid, "assistant", reply, timestamp=now - 60)
+
+    waiting = {item["session_id"] for item in summary(client)["conversations"]["waiting"]}
+    assert {"script-ar", "script-fr", "script-es", "script-ru", "script-ko", "script-de-quote"} <= waiting
+    assert "script-fr-report" not in waiting
+
+
 def test_unanswered_and_live_lease_are_distinct(client, home):
     now = float((home / "fixture-now").read_text())
     add_session(home, "unanswered", title="unanswered", now=now)
