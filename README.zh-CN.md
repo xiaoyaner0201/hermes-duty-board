@@ -61,7 +61,7 @@ hermes dashboard --stop && hermes dashboard
 
 - **聊天需要 Hermes 0.21.7+**，才能可靠识别调用者和会话。旧版网关会拒绝命令；终端命令及本地 CLI/TUI 的 `/duty` 在 **0.21.1+** 即可使用。
 - **聊天只允许看板主人调用**。在 `<HERMES_HOME>/duty-board/settings.json` 中将 `owner` 设为你的平台用户 ID（也可用 `DUTY_BOARD_OWNER`）。其他人调用时，不读取看板就直接拒绝。本地 CLI/TUI 信任有权读取该目录的本机账号，不需要平台 ID。
-- **私聊显示详情；群聊、频道和子区默认只显示数量**，不含标题、引用和链接。此时 `/duty full` 会提示私聊机器人，除非明确设置 `"chat_full_in_channels": true`。即使开启，默认仍只显示数量。开启后，目的频道里的所有人都可能看到来自其他私密会话的标题和位置。
+- **一对一私聊显示详情；群聊、频道、子区和多人私信默认只显示数量**，不含标题、引用和链接。（Slack 把多人私信也标成私聊，看板只认 ID 以 `D` 开头的一对一会话。）此时 `/duty full` 会提示私聊机器人，除非明确设置 `"chat_full_in_channels": true`。即使开启，默认仍只显示数量。开启后，目的频道里的所有人都可能看到来自其他私密会话的标题和位置。
 - 可用 `/duty counts`、`/duty full lang=zh`、`hermes duty --counts` 和 `hermes duty --full --lang ja`。语言依次取显式参数、设置里的 `chat_language`、Hermes 的 `display.language`、英文；聊天和终端均支持 17 种语言。
 
 虚构演示目录 `dev/demo_home.py` 的频道回复（来自真实命令运行）：

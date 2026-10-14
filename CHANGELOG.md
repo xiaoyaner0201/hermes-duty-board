@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Model-free `/duty` chat summaries and `hermes duty` CLI (`--full`, `--counts`, `--lang`, `--json`), sharing the read-only dashboard collectors.
 - Chat strings and compact durations in all 17 locales, with pinned Python CLDR plural rules.
-- Owner-only chat access on Hermes 0.21.7+, full details in DMs and counts-only shared-channel replies unless explicitly opted in; mentions and Markdown in item fields are neutralized.
+- Owner-only chat access on Hermes 0.21.7+. Full details only in one-to-one DMs; groups, channels, threads and group DMs get counts unless explicitly opted in. The caller comes only from the host's per-call binding, never from the process environment, and the routed profile's own owner and settings apply in a multi-profile gateway. Mentions are neutralized; Markdown is escaped on Discord and made inert on surfaces that convert it (Telegram, Slack, Feishu).
 - Offline synthetic coverage for command registration, CLI output, access, privacy, rendering, locale fallback and settings-aware caching.
 
 ### Fixed

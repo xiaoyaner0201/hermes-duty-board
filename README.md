@@ -61,7 +61,7 @@ Open the dashboard. A **Duty Board** tab appears before *Sessions*.
 
 - **Chat requires Hermes 0.21.7+** for trustworthy caller/session binding. On older gateways the command refuses; the CLI and local CLI/TUI `/duty` work on **0.21.1+**.
 - **Owner only in chat.** Set `owner` to your platform user ID in `<HERMES_HOME>/duty-board/settings.json` (or `DUTY_BOARD_OWNER`). Other callers are refused before board data is read. The local CLI/TUI trusts the local account that can already read that home; it does not need a platform ID.
-- **DMs show details. Groups, channels and threads show counts only**, without titles, excerpts or links. `/duty full` there adds a hint to DM the bot unless you explicitly set `"chat_full_in_channels": true`; even with that setting, the default stays counts-only. Enabling it can expose titles and locations from *other private conversations* to everyone in the destination channel.
+- **One-to-one DMs show details. Groups, channels, threads and group DMs show counts only**, without titles, excerpts or links. (Slack reports group DMs as DMs; the board only trusts IM channels whose id starts with `D`.) `/duty full` there adds a hint to DM the bot unless you explicitly set `"chat_full_in_channels": true`; even with that setting, the default stays counts-only. Enabling it can expose titles and locations from *other private conversations* to everyone in the destination channel.
 - `/duty counts`, `/duty full lang=zh`, `hermes duty --counts` and `hermes duty --full --lang ja` are supported. Language priority is explicit argument, `chat_language` in settings, Hermes `display.language`, then English. All 17 locales work in chat and the CLI.
 
 A channel reply from the fictional `dev/demo_home.py` home (actual command output):
