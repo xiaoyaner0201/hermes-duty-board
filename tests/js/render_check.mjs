@@ -33,7 +33,7 @@ const summary = {
   },
   delegations: {
     running: [{ id: "x1", goal: "Collect screenshots", count: 3, dispatched_at: now - 300, session: conv("s1") }],
-    dropped: [{ id: "x2", goal: "Benchmark", completed_at: now - 4000, summary: "done", session: conv("s2") }],
+    dropped: [{ id: "constructor", goal: "Prototype-safe", completed_at: now - 4000, summary: "done", session: conv("s2") }, { id: "x2", goal: "Benchmark", completed_at: now - 4000, summary: "done", session: conv("s2") }],
   },
   cron: {
     enabled: 12, paused: 1,
@@ -70,6 +70,7 @@ function render(locale, hostHasI18n = true) {
 
 const en = render("en");
 const problems = [];
+if (en.includes('class="db-item is-leaving db-line"><div class="db-line-main"><div class="db-line-title">Prototype-safe')) problems.push("prototype-like delegation id incorrectly rendered as leaving");
 for (const locale of catalogs) {
   const html = render(locale);
   const text = html.replace(/<[^>]+>/g, " ");
