@@ -42,6 +42,11 @@ def test_package_core_without_web_dependencies(home, monkeypatch):
     package = load_plugin("duty_no_web")
     board = importlib.import_module(package.__name__ + ".dashboard.board")
     assert board.build(float((home / "fixture-now").read_text()))["schema_version"] == 2
+    from types import SimpleNamespace
+    recorded = []
+    package.register(SimpleNamespace(register_command=lambda name, handler, **kw: recorded.append(handler), register_cli_command=lambda *a, **kw: None))
+    assert len(recorded) == 1
+    assert recorded[0]("lang=en") == "Nothing needs you right now."
 
 
 def test_core_reads_do_not_create_directories(home, api_module):
