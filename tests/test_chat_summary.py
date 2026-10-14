@@ -392,3 +392,18 @@ def test_budget_trims_low_priority_sections_first(text):
     for n in range(6):
         assert f"WAIT{n}" in result
     assert "+" in result  # something lower down was trimmed instead
+
+
+@pytest.mark.parametrize("payload", ["||SPOILER||", "**BOLD**", "`CODE`", "~~STRIKE~~", "__UNDER__", "*EM*", "_EM_"])
+@pytest.mark.parametrize("platform", ["telegram", "slack", "feishu"])
+def test_plain_fields_stay_inert_on_converting_surfaces(text, platform, payload):
+    """Adapters that convert Markdown would turn delimiters in an untrusted
+    title into formatting (a spoiler can hide text). Fields carry no ASCII
+    Markdown delimiter there."""
+    data = sample_board()
+    data["conversations"]["waiting"][0]["title"] = "T " + payload
+    result = text.render_summary(data, locale="en", now=10000, viewer={"is_owner": True, "platform": platform, "link_style": "plain"})
+    line = next(line for line in result.splitlines() if line.startswith("- T "))
+    for delimiter in ("||", "**", "`", "~~", "__", "*", "_"):
+        assert delimiter not in line, (delimiter, line)
+    assert payload.strip("|*`~_") in line

@@ -106,6 +106,10 @@ _LINK = re.compile(r"https://discord\.com/channels/(?:[0-9]{1,25}|@me)/[0-9]{1,2
 
 
 _ZWSP = "\u200b"
+# Look-alikes for Markdown delimiters on surfaces whose adapter converts Markdown:
+# asterisk operator, modifier low macron, modifier grave, tilde operator, dental
+# click, single angle quotes.
+_INERT = str.maketrans({"*": "\u2217", "_": "\u02cd", "`": "\u02cb", "~": "\u223c", "|": "\u01c0", "<": "\u2039", ">": "\u203a"})
 
 
 def safe_field(value, limit=70, *, markdown=True) -> str:
@@ -114,14 +118,15 @@ def safe_field(value, limit=70, *, markdown=True) -> str:
     Always: controls and newlines collapse to spaces, mentions get a zero-width
     space after ``@`` (``@everyone``, ``<@1>``, ``<@&3>``), and the result is
     clipped. With ``markdown`` (Discord, which renders the reply as written),
-    Markdown characters are backslash-escaped. Without it (Telegram, Slack,
-    Feishu adapters convert Markdown themselves; a terminal shows text as is),
-    a backslash would show up literally, so only link syntax is broken up.
+    Markdown characters are backslash-escaped. Without it (Telegram, Slack and
+    Feishu adapters convert Markdown themselves, so a backslash would show up
+    literally), the delimiters that could format or hide text become look-alike
+    characters that no converter treats as syntax, and link syntax is broken up.
     """
     text = " ".join("".join(c if c.isprintable() else " " for c in str(value or "")).split())
     text = text.replace("@", "@" + _ZWSP)
     if not markdown:
-        text = text.replace("](", "]" + _ZWSP + "(").replace("<", "‹").replace(">", "›")
+        text = text.translate(_INERT).replace("](", "]" + _ZWSP + "(")
     parts = []
     size = 0
     for char in text:
