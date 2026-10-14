@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Model-free `/duty` chat summaries and `hermes duty` CLI (`--full`, `--counts`, `--lang`, `--json`), sharing the read-only dashboard collectors.
+- Chat strings and compact durations in all 17 locales, with pinned Python CLDR plural rules.
+- Owner-only chat access on Hermes 0.21.7+, full details in DMs and counts-only shared-channel replies unless explicitly opted in; mentions and Markdown in item fields are neutralized.
+- Offline synthetic coverage for command registration, CLI output, access, privacy, rendering, locale fallback and settings-aware caching.
+
 ### Fixed
 
 - Improved Turkish dashboard wording after native-speaker review. Thanks to [@farukttbasar](https://github.com/farukttbasar) for the corrections ([#4](https://github.com/xiaoyaner0201/hermes-duty-board/pull/4)).

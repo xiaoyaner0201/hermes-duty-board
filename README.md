@@ -55,6 +55,25 @@ hermes dashboard --stop && hermes dashboard
 
 Open the dashboard. A **Duty Board** tab appears before *Sessions*.
 
+## Chat summary
+
+`/duty` replies with a compact, model-free summary in Discord and other Hermes chat platforms. `hermes duty` prints the same summary locally; `hermes duty --json` prints the raw board JSON for scripts.
+
+- **Chat requires Hermes 0.21.7+** for trustworthy caller/session binding. On older gateways the command refuses; the CLI and local CLI/TUI `/duty` work on **0.21.1+**.
+- **Owner only in chat.** Set `owner` to your platform user ID in `<HERMES_HOME>/duty-board/settings.json` (or `DUTY_BOARD_OWNER`). Other callers are refused before board data is read. The local CLI/TUI trusts the local account that can already read that home; it does not need a platform ID.
+- **DMs show details. Groups, channels and threads show counts only**, without titles, excerpts or links. `/duty full` there adds a hint to DM the bot unless you explicitly set `"chat_full_in_channels": true`; even with that setting, the default stays counts-only. Enabling it can expose titles and locations from *other private conversations* to everyone in the destination channel.
+- `/duty counts`, `/duty full lang=zh`, `hermes duty --counts` and `hermes duty --full --lang ja` are supported. Language priority is explicit argument, `chat_language` in settings, Hermes `display.language`, then English. All 17 locales work in chat and the CLI.
+
+A channel reply from the fictional `dev/demo_home.py` home (actual command output):
+
+```text
+Duty Board · 5 waiting on you · 5 running · 1 cron problem
+5 waiting on you
+5 running
+1 undelivered result
+1 cron problem
+```
+
 ## Configuration
 
 Everything is optional. To change the defaults, create `~/.hermes/duty-board/settings.json` (or `<HERMES_HOME>/duty-board/settings.json`):
@@ -71,8 +90,10 @@ Everything is optional. To change the defaults, create `~/.hermes/duty-board/set
 
 | Key | Default | Meaning |
 |---|---|---|
-| `owner` | unset | Platform user ID whose conversations count as yours. If unset, every conversation counts and nothing is hidden. Also settable via `DUTY_BOARD_OWNER`. |
+| `owner` | unset | Platform user ID whose conversations count as yours. If unset, every conversation counts on the dashboard/local CLI, but chat commands refuse. Also settable via `DUTY_BOARD_OWNER`. |
 | `hide_other_people_content` | `true` | When `owner` is set, other people's conversations are left out of *Waiting on you* and *Recently completed*. Their running turns and background jobs show only as "Conversation with …", with no content and no link. |
+| `chat_language` | Hermes language, then `en` | Default chat/CLI summary language; `lang=` / `--lang` overrides it. |
+| `chat_full_in_channels` | `false` | Only literal `true` permits explicit `/duty full` outside DMs. |
 | `people` | `{}` | Display labels for user IDs. Without one, the platform user name is shown. |
 | `window_days` | `7` | How far back to look for conversations. |
 | `stall_seconds` | `600` | How long a running turn can be silent before it is flagged. |
@@ -92,8 +113,9 @@ This is a heuristic. You will see the odd false positive; *Seen* clears it. The 
 ## Privacy and safety
 
 - **Read-only.** Opens `state.db` with SQLite `mode=ro` and reads `cron/jobs.json` and `gateway_state.json`.
-- **One file written.** Writes only its own dismiss list at `<HERMES_HOME>/duty-board/dismissed.json`.
+- **One file written, by dashboard dismissals only.** Chat/CLI commands never write or dismiss. The dashboard writes only its own dismiss list at `<HERMES_HOME>/duty-board/dismissed.json`.
 - **No network, no model calls, no credentials.** It never reads `.env`, `auth.json` or any token store.
+- **Chat privacy.** Only the configured owner can request a summary in messaging platforms. DMs show titles, places, ages and Discord web links; shared destinations show counts by default. Explicit channel opt-in can reveal private-conversation metadata to other participants. Other people’s hidden conversations stay hidden; mentions and Markdown are neutralized.
 - **Behind the dashboard's auth gate.** The API is mounted under `/api/plugins/duty-board/` like any other dashboard plugin.
 - **Stable for one Hermes version, not across all of them.** The plugin reads Hermes's internal tables. If a future Hermes release changes one, the affected section shows an empty list and a warning banner instead of breaking the page. Please open an issue when that happens.
 
