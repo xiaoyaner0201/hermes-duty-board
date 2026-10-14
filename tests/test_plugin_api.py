@@ -286,7 +286,7 @@ def test_schema_drift_keeps_summary_healthy_and_warns(client, home):
     assert response.status_code == 200
     data = response.json()
     assert data["schema_version"] == 2
-    assert data["plugin_version"] == "0.3.0"
+    assert data["plugin_version"] == "0.4.0"
     assert data["conversations"]["running"] == []
     assert {"section": "running", "code": "missingTable", "detail": "session_turn_leases"} in data["issues"]
     # Plain-text mirror stays for older clients and logs.
@@ -297,7 +297,7 @@ def test_collector_failure_is_a_code_not_an_exception_message(client, home, monk
     def boom(now):
         raise RuntimeError("/private/path/that/must/not/leak")
 
-    monkeypatch.setattr(api_module, "_collect_cron", boom)
+    monkeypatch.setattr(api_module.board, "_collect_cron", boom)
     data = summary(client)
     assert {"section": "cron", "code": "collectorFailed", "detail": "RuntimeError"} in data["issues"]
     assert "/private/path" not in json.dumps(data)

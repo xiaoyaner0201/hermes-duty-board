@@ -55,6 +55,26 @@ hermes dashboard --stop && hermes dashboard
 
 打开后台，在「会话」前面会多出一个 **Duty Board** 标签。
 
+## 聊天摘要
+
+`/duty` 在 Discord 等 Hermes 聊天平台回复一份简短摘要，不调用模型。`hermes duty` 在本地终端显示同样的摘要；`hermes duty --json` 输出原始看板 JSON，方便脚本使用。
+
+- **聊天需要 Hermes 0.21.7+**，才能可靠识别调用者和会话。旧版网关会拒绝命令；终端命令及本地 CLI/TUI 的 `/duty` 在 **0.21.1+** 即可使用。
+- **`plugins.isolation: host` 下不提供聊天摘要**。插件宿主进程只转发命令参数，不转发是谁发的，所以 `/duty` 会拒绝。宿主进程也不注册命令行命令，`hermes duty` 同样不可用；仪表盘照常可用。需要聊天和命令行摘要请使用默认的 `isolation: in_process`。
+- **聊天只允许看板主人调用**。在 `<HERMES_HOME>/duty-board/settings.json` 中将 `owner` 设为你的平台用户 ID（也可用 `DUTY_BOARD_OWNER`；多 profile 网关中读取被路由 profile 自己的 `.env`）。其他人调用时，不读取看板就直接拒绝。本地 CLI/TUI 信任有权读取该目录的本机账号，不需要平台 ID。
+- **一对一私聊显示详情；群聊、频道、子区和多人私信默认只显示数量**，不含标题、引用和链接。只在平台能证明是一对一的地方显示详情：Discord、Telegram、飞书、Google Chat、Mattermost，以及 ID 以 `D` 开头的 Slack 私聊（Slack 把多人私信也标成私聊）。Matrix（`m.direct` 房间可能不止两人）和其他平台只显示数量。此时 `/duty full` 会提示私聊机器人，除非明确设置 `"chat_full_in_channels": true`。即使开启，默认仍只显示数量。开启后，目的频道里的所有人都可能看到来自其他私密会话的标题和位置。
+- 可用 `/duty counts`、`/duty full lang=zh`、`hermes duty --counts` 和 `hermes duty --full --lang ja`。语言依次取显式参数、设置里的 `chat_language`、`HERMES_LANGUAGE`、Hermes 的 `display.language`（`config.yaml` 中的块格式）、英文；聊天和终端均支持 17 种语言。
+
+虚构演示目录 `dev/demo_home.py` 的频道回复（来自真实命令运行）：
+
+```text
+值班台 · 5 项等你回复 · 5 项进行中 · 1 项定时任务异常
+5 项等你回复
+5 项进行中
+1 项结果未送达
+1 项定时任务异常
+```
+
 ## 配置
 
 所有配置都可选。要改默认值，就新建 `~/.hermes/duty-board/settings.json`（即 `<HERMES_HOME>/duty-board/settings.json`）：
@@ -71,8 +91,10 @@ hermes dashboard --stop && hermes dashboard
 
 | 键 | 默认值 | 作用 |
 |---|---|---|
-| `owner` | 不设置 | 看板主人在平台上的用户 ID，只有这个人的对话才算“你的”。不设置时所有对话都算你的，什么都不隐藏。也可以用环境变量 `DUTY_BOARD_OWNER` 设置。 |
+| `owner` | 不设置 | 看板主人在平台上的用户 ID，只有这个人的对话才算“你的”。不设置时，后台和本地终端将所有对话视为你的且不隐藏，但聊天命令会拒绝。也可以用环境变量 `DUTY_BOARD_OWNER` 设置。 |
 | `hide_other_people_content` | `true` | 设置了 `owner` 时，其他人的对话不进「等你回复」和「最近完成」；他们正在跑的任务和后台子任务只显示“与某某的对话”，没有内容，也没有跳转链接。 |
+| `chat_language` | Hermes 语言，其次 `en` | 聊天/终端摘要的默认语言，可用 `lang=` / `--lang` 覆盖。 |
+| `chat_full_in_channels` | `false` | 只有布尔值 `true` 才允许在非私聊中显式使用 `/duty full`。 |
 | `people` | `{}` | 给用户 ID 起显示名；不设置就显示平台上的用户名。 |
 | `window_days` | `7` | 往回看多少天的对话。 |
 | `stall_seconds` | `600` | 正在跑的任务多久没动静就标黄。 |
@@ -92,8 +114,9 @@ hermes dashboard --stop && hermes dashboard
 ## 隐私与安全
 
 - **只读**：用 SQLite `mode=ro` 打开 `state.db`，另外只读 `cron/jobs.json` 和 `gateway_state.json`。
-- **只写一个文件**：只写自己的收起列表 `<HERMES_HOME>/duty-board/dismissed.json`。
+- **只有后台收起操作写一个文件**：聊天/终端命令从不写入，也不收起。后台只写自己的收起列表 `<HERMES_HOME>/duty-board/dismissed.json`。
 - **不联网、不调用模型、不碰凭据**：不读 `.env`、`auth.json` 或任何存储 token 的地方。
+- **聊天隐私**：聊天平台只允许配置的主人请求摘要。私聊显示标题、位置和时长，Discord 上另附网页链接；共享目的地默认只显示数量。显式开启频道全文后，其他参与者可能看到私密会话的元数据。其他人被隐藏的对话仍不显示内容；提及与 Markdown 都经过处理。
 - **受后台登录保护**：接口挂在 `/api/plugins/duty-board/` 下，和其他后台插件一样需要先登录后台。
 - **依赖 Hermes 内部数据表**：插件读的是 Hermes 内部表，它们不是对外承诺稳定的接口。将来哪次升级改了表结构，受影响的区块会显示为空并给出提示，整页不会挂掉。遇到这种情况请提 issue。
 

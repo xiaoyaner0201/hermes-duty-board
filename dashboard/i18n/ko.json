@@ -128,5 +128,49 @@
     "bluebubbles": "iMessage",
     "email": "이메일",
     "sms": "문자 메시지"
+  },
+  "chat": {
+    "empty": "지금은 처리할 일이 없습니다.",
+    "ownerOnly": "이 요약은 당번 보드 소유자만 볼 수 있습니다.",
+    "configureOwner": "채팅에서 사용하기 전에 duty-board/settings.json에서 owner를 설정하세요.",
+    "oldHost": "채팅에서 이 명령을 사용하려면 Hermes 0.21.7 이상이 필요합니다.",
+    "isolated": "플러그인이 별도 프로세스에서 실행되는 동안(plugins.isolation: host)에는 채팅 요약을 쓸 수 없습니다. 그곳에서는 호출한 사람을 확인할 수 없기 때문입니다. 대시보드를 사용하거나 plugins.isolation을 in_process로 설정하세요.",
+    "dmHint": "자세한 내용은 봇에게 DM을 보내거나 대시보드를 여세요.",
+    "error": "당번 보드를 사용할 수 없습니다({error}).",
+    "stalled": "{age} (정체됨)",
+    "privatePlace": "비공개 대화",
+    "untitled": "제목 없음",
+    "localPlace": "로컬",
+    "waitingHeading": "답변 대기 (미응답 포함)",
+    "cronHeading": "예약 작업 문제",
+    "units": {
+      "minute": "분",
+      "hour": "시간",
+      "day": "일"
+    },
+    "headline": "업무 현황판 · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "내용 숨김",
+    "runningHeading": "실행 중",
+    "droppedHeading": "완료됐지만 결과가 전달되지 않음",
+    "goalsHeading": "장기 목표",
+    "waitingCount": {
+      "other": "답변 대기 {count}건"
+    },
+    "runningCount": {
+      "other": "실행 중 {count}건"
+    },
+    "droppedCount": {
+      "other": "미전달 결과 {count}건"
+    },
+    "cronCount": {
+      "other": "예약 작업 문제 {count}건"
+    },
+    "goalsCount": {
+      "other": "지속 목표 {count}개"
+    },
+    "more": {
+      "other": "추가 {count}건"
+    }
   }
 }

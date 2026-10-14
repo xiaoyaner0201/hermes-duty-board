@@ -138,5 +138,61 @@
     "bluebubbles": "iMessage",
     "email": "Correio eletrónico",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "Nada precisa da sua atenção agora.",
+    "ownerOnly": "Este resumo está disponível apenas para o proprietário do painel.",
+    "configureOwner": "Defina owner em duty-board/settings.json antes de usar este comando no chat.",
+    "oldHost": "Este comando precisa do Hermes 0.21.7 ou mais recente no chat.",
+    "isolated": "Os resumos no chat ficam indisponíveis enquanto os plugins rodam em um processo separado (plugins.isolation: host): ali não é possível verificar quem chama. Use o painel ou defina plugins.isolation: in_process.",
+    "dmHint": "Envie uma mensagem privada ao bot ou abra o painel para ver os detalhes.",
+    "error": "Painel indisponível ({error}).",
+    "stalled": "{age} (parado)",
+    "privatePlace": "Conversa privada",
+    "untitled": "Sem título",
+    "localPlace": "Localmente",
+    "waitingHeading": "Aguardando você (inclui mensagens sem resposta)",
+    "cronHeading": "Problemas de tarefas agendadas",
+    "units": {
+      "minute": "min",
+      "hour": "h",
+      "day": "d"
+    },
+    "headline": "Quadro de atividade · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Conteúdo oculto",
+    "runningHeading": "A executar",
+    "droppedHeading": "Concluída, resultado não entregue",
+    "goalsHeading": "Objetivos a longo prazo",
+    "waitingCount": {
+      "one": "{count} aguardando você",
+      "many": "{count} aguardando você",
+      "other": "{count} aguardando você"
+    },
+    "runningCount": {
+      "one": "{count} em execução",
+      "many": "{count} em execução",
+      "other": "{count} em execução"
+    },
+    "droppedCount": {
+      "one": "{count} resultado não entregue",
+      "many": "{count} resultados não entregues",
+      "other": "{count} resultados não entregues"
+    },
+    "cronCount": {
+      "one": "{count} problema de tarefa agendada",
+      "many": "{count} problemas de tarefas agendadas",
+      "other": "{count} problemas de tarefas agendadas"
+    },
+    "goalsCount": {
+      "one": "{count} objetivo permanente",
+      "many": "{count} objetivos permanentes",
+      "other": "{count} objetivos permanentes"
+    },
+    "more": {
+      "one": "+{count} mais",
+      "many": "+{count} mais",
+      "other": "+{count} mais"
+    }
   }
 }

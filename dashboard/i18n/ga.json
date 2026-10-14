@@ -148,5 +148,73 @@
     "bluebubbles": "iMessage",
     "email": "Ríomhphost",
     "sms": "Teachtaireachtaí téacs"
+  },
+  "chat": {
+    "empty": "Níl aon rud ag teastáil uait faoi láthair.",
+    "ownerOnly": "Níl an achoimre seo ar fáil ach d’úinéir an bhoird.",
+    "configureOwner": "Socraigh owner in duty-board/settings.json sula n-úsáideann tú an t-ordú seo sa chomhrá.",
+    "oldHost": "Teastaíonn Hermes 0.21.7 nó níos nuaí don ordú seo sa chomhrá.",
+    "isolated": "Níl achoimrí comhrá ar fáil fad is a ritheann breiseáin i bpróiseas ar leith (plugins.isolation: host): ní féidir an glaoiteoir a fhíorú ansin. Úsáid an deais, nó socraigh plugins.isolation: in_process.",
+    "dmHint": "Seol teachtaireacht phríobháideach chuig an mbota nó oscail an deais le haghaidh sonraí.",
+    "error": "Níl clár na ndualgas ar fáil ({error}).",
+    "stalled": "{age} (i bhfostú)",
+    "privatePlace": "Comhrá príobháideach",
+    "untitled": "Gan teideal",
+    "localPlace": "Go háitiúil",
+    "waitingHeading": "Ag fanacht ort (teachtaireachtaí gan freagra san áireamh)",
+    "cronHeading": "Fadhbanna le jabanna sceidealaithe",
+    "units": {
+      "minute": "nóim",
+      "hour": "u",
+      "day": "l"
+    },
+    "headline": "Clár na ndualgas · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Ábhar i bhfolach",
+    "runningHeading": "Ag rith",
+    "droppedHeading": "Críochnaithe, ach níor seachadadh an toradh",
+    "goalsHeading": "Spriocanna fadtéarmacha",
+    "waitingCount": {
+      "one": "{count} ag fanacht ort",
+      "two": "{count} ag fanacht ort",
+      "few": "{count} ag fanacht ort",
+      "many": "{count} ag fanacht ort",
+      "other": "{count} ag fanacht ort"
+    },
+    "runningCount": {
+      "one": "{count} ar siúl",
+      "two": "{count} ar siúl",
+      "few": "{count} ar siúl",
+      "many": "{count} ar siúl",
+      "other": "{count} ar siúl"
+    },
+    "droppedCount": {
+      "one": "{count} toradh gan seachadadh",
+      "two": "{count} thoradh gan seachadadh",
+      "few": "{count} thoradh gan seachadadh",
+      "many": "{count} dtoradh gan seachadadh",
+      "other": "{count} toradh gan seachadadh"
+    },
+    "cronCount": {
+      "one": "{count} fhadhb le jab sceidealaithe",
+      "two": "{count} fhadhb le jabanna sceidealaithe",
+      "few": "{count} fhadhb le jabanna sceidealaithe",
+      "many": "{count} bhfadhb le jabanna sceidealaithe",
+      "other": "{count} fadhb le jabanna sceidealaithe"
+    },
+    "goalsCount": {
+      "one": "{count} sprioc bhuan",
+      "two": "{count} sprioc bhuan",
+      "few": "{count} sprioc bhuan",
+      "many": "{count} sprioc bhuan",
+      "other": "{count} sprioc bhuan"
+    },
+    "more": {
+      "one": "{count} eile",
+      "two": "{count} eile",
+      "few": "{count} eile",
+      "many": "{count} eile",
+      "other": "{count} eile"
+    }
   }
 }

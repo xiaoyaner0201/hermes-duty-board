@@ -128,5 +128,49 @@
     "bluebubbles": "iMessage",
     "email": "電子郵件",
     "sms": "簡訊"
+  },
+  "chat": {
+    "empty": "現在沒有需要你處理的事。",
+    "ownerOnly": "此摘要僅供值班台擁有者查看。",
+    "configureOwner": "請先在 duty-board/settings.json 中設定 owner，再在聊天中使用此指令。",
+    "oldHost": "在聊天中使用此指令需要 Hermes 0.21.7 或更新版本。",
+    "isolated": "外掛在獨立程序中執行時（plugins.isolation: host）無法提供聊天摘要：在那裡無法確認是誰在呼叫。請使用儀表板，或將 plugins.isolation 設為 in_process。",
+    "dmHint": "請私訊機器人或開啟儀表板查看詳情。",
+    "error": "值班台暫時無法使用（{error}）。",
+    "stalled": "{age}（停滯）",
+    "privatePlace": "私密對話",
+    "untitled": "未命名",
+    "localPlace": "本機",
+    "waitingHeading": "等你回覆（含未回覆訊息）",
+    "cronHeading": "排程工作異常",
+    "units": {
+      "minute": "分鐘",
+      "hour": "小時",
+      "day": "天"
+    },
+    "headline": "值班台 · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "內容不顯示",
+    "runningHeading": "執行中",
+    "droppedHeading": "已完成，但結果未能送回原對話",
+    "goalsHeading": "長期目標",
+    "waitingCount": {
+      "other": "{count} 項等你回覆"
+    },
+    "runningCount": {
+      "other": "{count} 項進行中"
+    },
+    "droppedCount": {
+      "other": "{count} 項結果未送達"
+    },
+    "cronCount": {
+      "other": "{count} 項排程工作異常"
+    },
+    "goalsCount": {
+      "other": "{count} 項長期目標"
+    },
+    "more": {
+      "other": "另有 {count} 項"
+    }
   }
 }

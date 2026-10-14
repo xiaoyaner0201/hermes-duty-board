@@ -133,5 +133,55 @@
     "bluebubbles": "iMessage",
     "email": "Email",
     "sms": "SMS"
+  },
+  "chat": {
+    "headline": "Duty Board · {waiting} · {running} · {cron}",
+    "empty": "Nothing needs you right now.",
+    "ownerOnly": "This summary is only available to the board’s owner.",
+    "configureOwner": "Set owner in duty-board/settings.json before using this command in chat.",
+    "oldHost": "This command needs Hermes 0.21.7 or newer in chat.",
+    "isolated": "Chat summaries are unavailable while plugins run in a separate process (plugins.isolation: host): the caller cannot be verified there. Use the dashboard, or set plugins.isolation: in_process.",
+    "dmHint": "DM the bot or open the dashboard for details.",
+    "error": "Duty Board unavailable ({error}).",
+    "item": "{title} · {place} · {age}",
+    "stalled": "{age} (stalled)",
+    "hidden": "Content hidden",
+    "privatePlace": "Private conversation",
+    "untitled": "Untitled",
+    "localPlace": "Local",
+    "units": {
+      "minute": "m",
+      "hour": "h",
+      "day": "d"
+    },
+    "waitingHeading": "Waiting on you (including unanswered)",
+    "runningHeading": "Running",
+    "droppedHeading": "Finished, but not delivered",
+    "cronHeading": "Cron problems",
+    "goalsHeading": "Standing goals",
+    "waitingCount": {
+      "one": "{count} waiting on you",
+      "other": "{count} waiting on you"
+    },
+    "runningCount": {
+      "one": "{count} running",
+      "other": "{count} running"
+    },
+    "droppedCount": {
+      "one": "{count} undelivered result",
+      "other": "{count} undelivered results"
+    },
+    "cronCount": {
+      "one": "{count} cron problem",
+      "other": "{count} cron problems"
+    },
+    "goalsCount": {
+      "one": "{count} standing goal",
+      "other": "{count} standing goals"
+    },
+    "more": {
+      "one": "+{count} more",
+      "other": "+{count} more"
+    }
   }
 }

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. Duty Board is small on purpose. It is one read-only dashboard tab that answers "what needs me right now?", and changes should keep it that way.
+Thanks for helping. Duty Board is small on purpose. It is a read-only dashboard tab with model-free chat and CLI summaries that answers "what needs me right now?", and changes should keep it that way.
 
 ## Ground rules
 
@@ -33,7 +33,7 @@ To see the UI, use the harness in `dev/` (see `dev/README.md`). It renders the t
 - For UI changes, attach a screenshot from the harness.
 - New UI strings go into `dashboard/i18n/en.json` first. Add the same key to every other catalog; if you cannot translate it, open the PR anyway and say so, and a maintainer will fill it in. Then run `node tools/build_i18n.mjs` to refresh the bundle.
 - Never build sentences by concatenating translated fragments. Use one message with `{placeholders}` so translators can reorder words.
-- The API returns codes (`issues`, `cron.problems[].reasons`) and the UI translates them. Do not put user-facing prose in `plugin_api.py`.
+- The API returns codes (`issues`, `cron.problems[].reasons`) and the UI translates them. Do not put user-facing prose in the collectors (`dashboard/board.py`) or `plugin_api.py`.
 
 ## Translations
 
@@ -50,11 +50,17 @@ To fix or improve a translation:
 
 Plural messages are objects such as `{ "one": "{count} paused", "other": "{count} paused" }`. Durations ("5 min") are formatted by the browser and passed in as `{value}` or `{duration}`, so you only translate the sentence around them.
 
+### Chat strings and privacy tests
+
+Add new summary strings to the top-level `chat` group in English first, then all 16 other catalogs. Keep complete sentences with matching placeholders. `chat.*Count` and `chat.more` are CLDR plural objects; include exactly the categories required by the locale. `chat.units` contains compact `minute`, `hour` and `day` abbreviations: the Python renderer uses these instead of browser `Intl`. Update `dashboard/summary_text.py` and pinned tests if the supported plural rules change. The normal bundle generator includes the group even though the dashboard UI does not use it.
+
+Run `python -m pytest`, `node tests/js/i18n_check.mjs` and `node tools/build_i18n.mjs`. Tests use fictional homes and block outbound sockets. Command tests must prove refusal **before collection**, DM/channel separation, strict channel opt-in, private-field redaction and mention/Markdown/newline/length sanitation. For any changed access or privacy guard, prove RED: copy the candidate into a disposable directory, remove just that guard, run its named test and retain the failed assertion, then restore the bytes and run GREEN. Never mutate a live plugin or use a real Hermes home. No extra CI step is needed: pytest discovers these tests automatically.
+
 To add a locale that Hermes itself starts shipping, add its code to `SUPPORTED` in `tests/js/i18n_check.mjs` and create the catalog.
 
 Native-speaker review is the most useful contribution here. The non-English, non-Chinese and non-Japanese catalogs were drafted carefully but have not yet been checked by native speakers.
 
-Optionally, extend the waiting and promise phrase lists in `dashboard/plugin_api.py` for your language, with tests in `tests/`. The question-mark rule already covers every language.
+Optionally, extend the waiting and promise phrase lists in `dashboard/board.py` for your language, with tests in `tests/`. The question-mark rule already covers every language.
 
 ## Reporting bugs
 

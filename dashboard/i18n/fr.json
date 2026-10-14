@@ -138,5 +138,61 @@
     "bluebubbles": "iMessage",
     "email": "Courriel",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "Rien ne nécessite ton attention pour le moment.",
+    "ownerOnly": "Ce résumé est réservé au propriétaire du tableau de garde.",
+    "configureOwner": "Définis owner dans duty-board/settings.json avant d’utiliser cette commande dans le chat.",
+    "oldHost": "Cette commande nécessite Hermes 0.21.7 ou plus récent dans le chat.",
+    "isolated": "Les résumés dans le chat sont indisponibles quand les plugins tournent dans un processus séparé (plugins.isolation: host) : l’appelant n’y est pas vérifiable. Utilise le tableau de bord ou règle plugins.isolation: in_process.",
+    "dmHint": "Écris au bot en privé ou ouvre le tableau de bord pour les détails.",
+    "error": "Tableau de garde indisponible ({error}).",
+    "stalled": "{age} (bloqué)",
+    "privatePlace": "Conversation privée",
+    "untitled": "Sans titre",
+    "localPlace": "En local",
+    "waitingHeading": "En attente de toi (y compris les messages sans réponse)",
+    "cronHeading": "Problèmes de tâches planifiées",
+    "units": {
+      "minute": "min",
+      "hour": "h",
+      "day": "j"
+    },
+    "headline": "Tableau de suivi · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Contenu masqué",
+    "runningHeading": "En cours",
+    "droppedHeading": "Terminée, résultat non transmis",
+    "goalsHeading": "Objectifs à long terme",
+    "waitingCount": {
+      "one": "{count} en attente de toi",
+      "many": "{count} en attente de toi",
+      "other": "{count} en attente de toi"
+    },
+    "runningCount": {
+      "one": "{count} en cours",
+      "many": "{count} en cours",
+      "other": "{count} en cours"
+    },
+    "droppedCount": {
+      "one": "{count} résultat non livré",
+      "many": "{count} résultats non livrés",
+      "other": "{count} résultats non livrés"
+    },
+    "cronCount": {
+      "one": "{count} problème de tâche planifiée",
+      "many": "{count} problèmes de tâches planifiées",
+      "other": "{count} problèmes de tâches planifiées"
+    },
+    "goalsCount": {
+      "one": "{count} objectif permanent",
+      "many": "{count} objectifs permanents",
+      "other": "{count} objectifs permanents"
+    },
+    "more": {
+      "one": "+{count} de plus",
+      "many": "+{count} de plus",
+      "other": "+{count} de plus"
+    }
   }
 }

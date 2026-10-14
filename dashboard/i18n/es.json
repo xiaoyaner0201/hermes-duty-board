@@ -138,5 +138,61 @@
     "bluebubbles": "iMessage",
     "email": "Correo electrónico",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "Nada requiere tu atención ahora mismo.",
+    "ownerOnly": "Este resumen solo está disponible para el propietario del panel.",
+    "configureOwner": "Configura owner en duty-board/settings.json antes de usar este comando en el chat.",
+    "oldHost": "Este comando necesita Hermes 0.21.7 o posterior en el chat.",
+    "isolated": "Los resúmenes en el chat no están disponibles mientras los plugins se ejecutan en un proceso aparte (plugins.isolation: host): allí no se puede verificar quién llama. Usa el panel o configura plugins.isolation: in_process.",
+    "dmHint": "Envía un mensaje privado al bot o abre el panel para ver los detalles.",
+    "error": "Panel no disponible ({error}).",
+    "stalled": "{age} (estancado)",
+    "privatePlace": "Conversación privada",
+    "untitled": "Sin título",
+    "localPlace": "Localmente",
+    "waitingHeading": "Esperando tu respuesta (incluye mensajes sin respuesta)",
+    "cronHeading": "Problemas de tareas programadas",
+    "units": {
+      "minute": "min",
+      "hour": "h",
+      "day": "d"
+    },
+    "headline": "Panel de actividad · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Contenido oculto",
+    "runningHeading": "En ejecución",
+    "droppedHeading": "Finalizada, resultado no entregado",
+    "goalsHeading": "Objetivos a largo plazo",
+    "waitingCount": {
+      "one": "{count} esperando tu respuesta",
+      "many": "{count} esperando tu respuesta",
+      "other": "{count} esperando tu respuesta"
+    },
+    "runningCount": {
+      "one": "{count} en ejecución",
+      "many": "{count} en ejecución",
+      "other": "{count} en ejecución"
+    },
+    "droppedCount": {
+      "one": "{count} resultado sin entregar",
+      "many": "{count} resultados sin entregar",
+      "other": "{count} resultados sin entregar"
+    },
+    "cronCount": {
+      "one": "{count} problema de tarea programada",
+      "many": "{count} problemas de tareas programadas",
+      "other": "{count} problemas de tareas programadas"
+    },
+    "goalsCount": {
+      "one": "{count} objetivo permanente",
+      "many": "{count} objetivos permanentes",
+      "other": "{count} objetivos permanentes"
+    },
+    "more": {
+      "one": "+{count} más",
+      "many": "+{count} más",
+      "other": "+{count} más"
+    }
   }
 }

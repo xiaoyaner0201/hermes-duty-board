@@ -143,5 +143,67 @@
     "bluebubbles": "iMessage",
     "email": "Электронная почта",
     "sms": "СМС"
+  },
+  "chat": {
+    "empty": "Сейчас ничто не требует вашего внимания.",
+    "ownerOnly": "Эта сводка доступна только владельцу панели.",
+    "configureOwner": "Задайте owner в duty-board/settings.json перед использованием команды в чате.",
+    "oldHost": "Для этой команды в чате нужен Hermes 0.21.7 или новее.",
+    "isolated": "Сводки в чате недоступны, пока плагины работают в отдельном процессе (plugins.isolation: host): там нельзя проверить, кто вызывает команду. Используйте панель или задайте plugins.isolation: in_process.",
+    "dmHint": "Напишите боту в личные сообщения или откройте панель для подробностей.",
+    "error": "Панель недоступна ({error}).",
+    "stalled": "{age} (застряло)",
+    "privatePlace": "Личная беседа",
+    "untitled": "Без названия",
+    "localPlace": "Локально",
+    "waitingHeading": "Ждут вас (включая сообщения без ответа)",
+    "cronHeading": "Проблемы заданий по расписанию",
+    "units": {
+      "minute": "мин",
+      "hour": "ч",
+      "day": "д"
+    },
+    "headline": "Панель дежурного · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Содержимое скрыто",
+    "runningHeading": "Выполняются",
+    "droppedHeading": "Завершено, но результат не доставлен",
+    "goalsHeading": "Долгосрочные цели",
+    "waitingCount": {
+      "one": "{count} ждёт вас",
+      "few": "{count} ждут вас",
+      "many": "{count} ждут вас",
+      "other": "{count} ждут вас"
+    },
+    "runningCount": {
+      "one": "{count} выполняется",
+      "few": "{count} выполняются",
+      "many": "{count} выполняются",
+      "other": "{count} выполняются"
+    },
+    "droppedCount": {
+      "one": "{count} недоставленный результат",
+      "few": "{count} недоставленных результата",
+      "many": "{count} недоставленных результатов",
+      "other": "{count} недоставленных результатов"
+    },
+    "cronCount": {
+      "one": "{count} проблема задания по расписанию",
+      "few": "{count} проблемы заданий по расписанию",
+      "many": "{count} проблем заданий по расписанию",
+      "other": "{count} проблем заданий по расписанию"
+    },
+    "goalsCount": {
+      "one": "{count} постоянная цель",
+      "few": "{count} постоянные цели",
+      "many": "{count} постоянных целей",
+      "other": "{count} постоянных целей"
+    },
+    "more": {
+      "one": "Ещё {count}",
+      "few": "Ещё {count}",
+      "many": "Ещё {count}",
+      "other": "Ещё {count}"
+    }
   }
 }
