@@ -139,7 +139,7 @@
     "ownerOnly": "Hierdie opsomming is slegs vir die bord se eienaar beskikbaar.",
     "configureOwner": "Stel owner in duty-board/settings.json voordat jy hierdie opdrag in klets gebruik.",
     "oldHost": "Hierdie opdrag vereis Hermes 0.21.7 of nuwer in klets.",
-    "isolated": "Kletsopsommings is nie beskikbaar terwyl inproppe in ’n aparte proses loop nie (plugins.isolation: host): daar kan nie bevestig word wie roep nie. Gebruik hermes duty of die kontrolepaneel.",
+    "isolated": "Kletsopsommings is nie beskikbaar terwyl inproppe in ’n aparte proses loop nie (plugins.isolation: host): daar kan nie bevestig word wie roep nie. Gebruik die kontrolepaneel of stel plugins.isolation: in_process.",
     "dmHint": "Stuur ’n privaatboodskap aan die bot of maak die kontrolepaneel oop vir besonderhede.",
     "error": "Diensbord nie beskikbaar nie ({error}).",
     "stalled": "{age} (vasgeval)",

@@ -60,7 +60,7 @@ hermes dashboard --stop && hermes dashboard
 `/duty` 在 Discord 等 Hermes 聊天平台回复一份简短摘要，不调用模型。`hermes duty` 在本地终端显示同样的摘要；`hermes duty --json` 输出原始看板 JSON，方便脚本使用。
 
 - **聊天需要 Hermes 0.21.7+**，才能可靠识别调用者和会话。旧版网关会拒绝命令；终端命令及本地 CLI/TUI 的 `/duty` 在 **0.21.1+** 即可使用。
-- **`plugins.isolation: host` 下不提供聊天摘要**。插件宿主进程只转发命令参数，不转发是谁发的，所以 `/duty` 会拒绝；`hermes duty` 和仪表盘照常可用。
+- **`plugins.isolation: host` 下不提供聊天摘要**。插件宿主进程只转发命令参数，不转发是谁发的，所以 `/duty` 会拒绝。宿主进程也不注册命令行命令，`hermes duty` 同样不可用；仪表盘照常可用。需要聊天和命令行摘要请使用默认的 `isolation: in_process`。
 - **聊天只允许看板主人调用**。在 `<HERMES_HOME>/duty-board/settings.json` 中将 `owner` 设为你的平台用户 ID（也可用 `DUTY_BOARD_OWNER`；多 profile 网关中读取被路由 profile 自己的 `.env`）。其他人调用时，不读取看板就直接拒绝。本地 CLI/TUI 信任有权读取该目录的本机账号，不需要平台 ID。
 - **一对一私聊显示详情；群聊、频道、子区和多人私信默认只显示数量**，不含标题、引用和链接。只在平台能证明是一对一的地方显示详情：Discord、Telegram、飞书、Google Chat、Mattermost，以及 ID 以 `D` 开头的 Slack 私聊（Slack 把多人私信也标成私聊）。Matrix（`m.direct` 房间可能不止两人）和其他平台只显示数量。此时 `/duty full` 会提示私聊机器人，除非明确设置 `"chat_full_in_channels": true`。即使开启，默认仍只显示数量。开启后，目的频道里的所有人都可能看到来自其他私密会话的标题和位置。
 - 可用 `/duty counts`、`/duty full lang=zh`、`hermes duty --counts` 和 `hermes duty --full --lang ja`。语言依次取显式参数、设置里的 `chat_language`、`HERMES_LANGUAGE`、Hermes 的 `display.language`（`config.yaml` 中的块格式）、英文；聊天和终端均支持 17 种语言。

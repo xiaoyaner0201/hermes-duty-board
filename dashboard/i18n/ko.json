@@ -134,7 +134,7 @@
     "ownerOnly": "이 요약은 당번 보드 소유자만 볼 수 있습니다.",
     "configureOwner": "채팅에서 사용하기 전에 duty-board/settings.json에서 owner를 설정하세요.",
     "oldHost": "채팅에서 이 명령을 사용하려면 Hermes 0.21.7 이상이 필요합니다.",
-    "isolated": "플러그인이 별도 프로세스에서 실행되는 동안(plugins.isolation: host)에는 채팅 요약을 쓸 수 없습니다. 그곳에서는 호출한 사람을 확인할 수 없기 때문입니다. hermes duty 또는 대시보드를 사용하세요.",
+    "isolated": "플러그인이 별도 프로세스에서 실행되는 동안(plugins.isolation: host)에는 채팅 요약을 쓸 수 없습니다. 그곳에서는 호출한 사람을 확인할 수 없기 때문입니다. 대시보드를 사용하거나 plugins.isolation을 in_process로 설정하세요.",
     "dmHint": "자세한 내용은 봇에게 DM을 보내거나 대시보드를 여세요.",
     "error": "당번 보드를 사용할 수 없습니다({error}).",
     "stalled": "{age} (정체됨)",

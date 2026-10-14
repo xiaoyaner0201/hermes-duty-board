@@ -139,7 +139,7 @@
     "ownerOnly": "Ez az összefoglaló csak a tábla tulajdonosának érhető el.",
     "configureOwner": "A parancs csevegésbeli használata előtt állítsd be az owner értékét a duty-board/settings.json fájlban.",
     "oldHost": "A parancs csevegésbeli használatához Hermes 0.21.7 vagy újabb szükséges.",
-    "isolated": "A csevegésbeli összefoglalók nem érhetők el, amíg a bővítmények külön folyamatban futnak (plugins.isolation: host): ott nem ellenőrizhető, ki hívja a parancsot. Használd a hermes duty parancsot vagy az irányítópultot.",
+    "isolated": "A csevegésbeli összefoglalók nem érhetők el, amíg a bővítmények külön folyamatban futnak (plugins.isolation: host): ott nem ellenőrizhető, ki hívja a parancsot. Használd az irányítópultot, vagy állítsd be: plugins.isolation: in_process.",
     "dmHint": "A részletekért írj privát üzenetet a botnak, vagy nyisd meg az irányítópultot.",
     "error": "Az ügyeleti tábla nem érhető el ({error}).",
     "stalled": "{age} (elakadt)",

@@ -134,7 +134,7 @@
     "ownerOnly": "此摘要仅供值班台所有者查看。",
     "configureOwner": "请先在 duty-board/settings.json 中设置 owner，再在聊天中使用此命令。",
     "oldHost": "在聊天中使用此命令需要 Hermes 0.21.7 或更新版本。",
-    "isolated": "插件在独立进程中运行时（plugins.isolation: host）无法提供聊天摘要：那里无法确认是谁在调用。请使用 hermes duty 或仪表盘。",
+    "isolated": "插件在独立进程中运行时（plugins.isolation: host）无法提供聊天摘要：那里无法确认是谁在调用。请使用仪表盘，或将 plugins.isolation 设为 in_process。",
     "dmHint": "请私聊机器人或打开仪表盘查看详情。",
     "error": "值班台暂不可用（{error}）。",
     "stalled": "{age}（停滞）",

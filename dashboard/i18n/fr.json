@@ -144,7 +144,7 @@
     "ownerOnly": "Ce résumé est réservé au propriétaire du tableau de garde.",
     "configureOwner": "Définis owner dans duty-board/settings.json avant d’utiliser cette commande dans le chat.",
     "oldHost": "Cette commande nécessite Hermes 0.21.7 ou plus récent dans le chat.",
-    "isolated": "Les résumés dans le chat sont indisponibles quand les plugins tournent dans un processus séparé (plugins.isolation: host) : l’appelant n’y est pas vérifiable. Utilise hermes duty ou le tableau de bord.",
+    "isolated": "Les résumés dans le chat sont indisponibles quand les plugins tournent dans un processus séparé (plugins.isolation: host) : l’appelant n’y est pas vérifiable. Utilise le tableau de bord ou règle plugins.isolation: in_process.",
     "dmHint": "Écris au bot en privé ou ouvre le tableau de bord pour les détails.",
     "error": "Tableau de garde indisponible ({error}).",
     "stalled": "{age} (bloqué)",

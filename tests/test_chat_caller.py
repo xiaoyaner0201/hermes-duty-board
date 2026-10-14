@@ -239,6 +239,17 @@ def test_plugin_host_child_refuses_chat_and_keeps_data(duty, home, monkeypatch):
     result = duty()
     assert "OWNERTITLE" not in result
     assert "plugins.isolation" in result
+    # The host skips register_cli_command in the child too, so `hermes duty` does
+    # not exist there: the refusal must not send the user to it.
+    assert "hermes duty" not in result
+
+
+def test_isolation_refusal_never_points_to_the_cli_in_any_locale():
+    import glob
+    for path in sorted(glob.glob("dashboard/i18n/*.json")):
+        text = json.load(open(path, encoding="utf-8"))["chat"]["isolated"]
+        assert "hermes duty" not in text, path
+        assert "plugins.isolation: host" in text, path
 
 
 def test_routed_profile_ignores_the_launch_profile_owner_variable(duty, home, tmp_path, monkeypatch, session_context):
