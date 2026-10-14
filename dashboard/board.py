@@ -34,7 +34,7 @@ except Exception:  # pragma: no cover - only outside a Hermes runtime
     get_hermes_home = None  # type: ignore[assignment]
 
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 logger = logging.getLogger(__name__)
 
 DEFAULT_MESSAGING_SOURCES = (
@@ -138,8 +138,8 @@ def _strict_bool(raw: Any, default: bool) -> bool:
     return raw if isinstance(raw, bool) else default
 
 
-def _runtime_settings() -> Dict[str, Any]:
-    raw = _settings()
+def _runtime_settings(raw=None) -> Dict[str, Any]:
+    raw = _settings() if raw is None else raw
     env_owner = os.environ.get("DUTY_BOARD_OWNER")
     owner = env_owner if env_owner is not None else raw.get("owner")
     owner = str(owner).strip() if owner is not None else ""
@@ -439,10 +439,11 @@ def _collect_conversations(
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
     warnings: Optional[List[Dict[str, str]]] = None,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
-    settings = _runtime_settings()
+    settings = _runtime_settings() if settings is None else settings
     people = settings["people"]
     dismissed = _dismissed()
     sessions_missing = _missing(schema, "sessions", _SESSION_COLUMNS)
@@ -615,6 +616,7 @@ def _collect_delegations(
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
     warnings: Optional[List[Dict[str, str]]] = None,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
@@ -623,7 +625,7 @@ def _collect_delegations(
         for item in missing:
             _warn(warnings, "delegations", item)
         return {"running": [], "dropped": []}
-    settings = _runtime_settings()
+    settings = _runtime_settings() if settings is None else settings
     dismissed = _dismissed()
     running: List[Dict[str, Any]] = []
     dropped: List[Dict[str, Any]] = []
@@ -723,6 +725,7 @@ def _collect_goals(
     now: float,
     schema: Optional[Dict[str, Set[str]]] = None,
     warnings: Optional[List[Dict[str, str]]] = None,
+    settings: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     schema = schema or _schema_snapshot(conn)
     warnings = warnings if warnings is not None else []
@@ -732,7 +735,7 @@ def _collect_goals(
         for missing in state_missing + session_missing:
             _warn(warnings, "goals", missing)
         return {"items": [], "stale": 0}
-    settings = _runtime_settings()
+    settings = _runtime_settings() if settings is None else settings
     live: List[Dict[str, Any]] = []
     stale = 0
     for meta in conn.execute("SELECT key, value FROM state_meta WHERE key LIKE 'goal:%'").fetchall():
@@ -786,7 +789,8 @@ def _run_collector(name: str, fn: Callable[[], Any], default: Any, warnings: Lis
         return default
 
 
-def build(now: float) -> Dict[str, Any]:
+def build(now: float, *, settings=None) -> Dict[str, Any]:
+    settings = _runtime_settings() if settings is None else settings
     warnings = _Issues()
     empty_conversations = {"running": [], "waiting": [], "unanswered": [], "done": []}
     empty_delegations = {"running": [], "dropped": []}
@@ -796,13 +800,13 @@ def build(now: float) -> Dict[str, Any]:
         conn = _connect()
         schema = _schema_snapshot(conn)
         conversations = _run_collector(
-            "conversations", lambda: _collect_conversations(conn, now, schema, warnings), empty_conversations, warnings,
+            "conversations", lambda: _collect_conversations(conn, now, schema, warnings, settings), empty_conversations, warnings,
         )
         delegations = _run_collector(
-            "delegations", lambda: _collect_delegations(conn, now, schema, warnings), empty_delegations, warnings,
+            "delegations", lambda: _collect_delegations(conn, now, schema, warnings, settings), empty_delegations, warnings,
         )
         goals = _run_collector(
-            "goals", lambda: _collect_goals(conn, now, schema, warnings), {"items": [], "stale": 0}, warnings,
+            "goals", lambda: _collect_goals(conn, now, schema, warnings, settings), {"items": [], "stale": 0}, warnings,
         )
     except Exception as exc:  # noqa: BLE001 - a missing/corrupt DB still yields a useful page
         logger.exception("Duty Board state database collector failed")
@@ -827,13 +831,14 @@ def build(now: float) -> Dict[str, Any]:
     }
 
 
-def cached_summary() -> Dict[str, Any]:
+def cached_summary(*, settings=None) -> Dict[str, Any]:
     now = time.time()
-    home = str(_home())
+    settings = _runtime_settings() if settings is None else settings
+    home = (str(_home()), json.dumps(settings, sort_keys=True))
     with _cache_lock:
         if _cache["data"] is not None and _cache["home"] == home and now - _cache["at"] < CACHE_TTL_S:
             return _cache["data"]
-    data = build(now)
+    data = build(now, settings=settings)
     with _cache_lock:
         _cache.update(at=now, data=data, home=home)
     return data
