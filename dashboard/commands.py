@@ -19,14 +19,48 @@ except ImportError:  # outside Hermes
     pass
 
 
-def _session(name: str) -> str:
+_LOCAL_SURFACES = frozenset({"", "cli", "tui", "desktop", "local"})
+
+
+def _session_from_context(name: str):
+    """The value the host bound for *this* call, or None when nothing was bound.
+
+    Read the ContextVar itself. ``get_session_env`` falls back to ``os.environ``
+    when a var is unset, and that environment can carry another turn's caller: a
+    process started from a gateway-spawned terminal inherits it, and old hosts
+    without per-call binding leave it in place. A value from there must never
+    authorize anyone, so "unset" stays distinguishable from "bound to empty".
+    """
     try:
-        from gateway.session_context import get_session_env
-        return str(get_session_env(name) or "")
+        from gateway import session_context
     except ImportError:
-        # Old hosts have no context binding. Never use process-global session
-        # values as an authorization substitute (they can belong to a cron).
-        return ""
+        return None
+    var = getattr(session_context, "_VAR_MAP", {}).get(name)
+    unset = getattr(session_context, "_UNSET", None)
+    if var is None or unset is None:
+        return None
+    value = var.get()
+    return None if value is unset else str(value or "")
+
+
+_session = _session_from_context
+
+
+def _in_gateway() -> bool:
+    """True only inside the running messaging gateway process.
+
+    ``_HERMES_GATEWAY`` alone is not enough: every process that imports
+    ``gateway.run`` sets it, including the ``hermes`` CLI and TUI. Like Hermes's
+    own process guards, also require that this process owns the live gateway
+    PID file. When the check itself fails, assume a gateway (fail closed).
+    """
+    if os.environ.get("_HERMES_GATEWAY") != "1":
+        return False
+    try:
+        from gateway.status import get_running_pid
+        return get_running_pid(cleanup_stale=False) == os.getpid()
+    except Exception:
+        return True
 
 
 def _arguments(raw: str):
@@ -56,12 +90,15 @@ def duty(raw_args: str = "") -> str:
         locale = choose_locale(settings=settings)
         mode, explicit = _arguments(raw_args)
         locale = choose_locale(explicit, settings)
-        platform = _session("HERMES_SESSION_PLATFORM").lower()
-        user_id = _session("HERMES_SESSION_USER_ID")
-        chat_type = _session("HERMES_SESSION_CHAT_TYPE").lower()
-        in_gateway = os.environ.get("_HERMES_GATEWAY") == "1"
-        local = platform in {"", "cli", "tui"} and not in_gateway
-        if in_gateway and platform in {"", "cli", "tui"}:
+        bound_platform = _session("HERMES_SESSION_PLATFORM")
+        platform = (bound_platform or "").lower()
+        user_id = _session("HERMES_SESSION_USER_ID") or ""
+        chat_type = (_session("HERMES_SESSION_CHAT_TYPE") or "").lower()
+        # Local: no messaging surface bound for this call. In a gateway that means
+        # the host did not bind the call at all (before 0.21.7), so we cannot tell
+        # who is asking.
+        local = platform in _LOCAL_SURFACES
+        if local and bound_platform is None and _in_gateway():
             return message(locale, "oldHost")
         runtime = board._runtime_settings(settings)
         owner = runtime["owner"]

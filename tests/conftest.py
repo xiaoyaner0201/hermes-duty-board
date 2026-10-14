@@ -38,7 +38,11 @@ def commands(home, monkeypatch):
     package = load_plugin("duty_commands_" + str(id(home)))
     module = importlib.import_module(package.__name__ + ".dashboard.commands")
     monkeypatch.delenv("_HERMES_GATEWAY", raising=False)
-    monkeypatch.setattr(module, "_session", lambda name: "")
+    # Default: a local call with nothing bound. Keep the real resolvers reachable
+    # for tests that exercise them (tests/test_chat_caller.py).
+    module.real_resolvers = {"_session": module._session, "_in_gateway": module._in_gateway}
+    monkeypatch.setattr(module, "_session", lambda name: None)
+    monkeypatch.setattr(module, "_in_gateway", lambda: False)
     return module
 
 
