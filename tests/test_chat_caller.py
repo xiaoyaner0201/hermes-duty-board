@@ -153,3 +153,48 @@ def test_cleared_context_is_local(duty, home, session_context):
     tokens = session_context.set_session_vars(platform="discord", user_id=OWNER, chat_type="dm", chat_id="1")
     session_context.clear_session_vars(tokens)
     assert "OWNERTITLE" in duty()
+
+
+@pytest.mark.parametrize("platform,chat_id,private", [
+    ("slack", "D0123", True),        # one-to-one IM
+    ("slack", "G0456", False),       # group DM (mpim): the host reports chat_type "dm"
+    ("slack", "C0789", False),
+    ("discord", "1234", True),       # Discord DMs: the host only says "dm" for DMChannel or no guild
+    ("telegram", "1234", True),
+    ("matrix", "!room:x", True),
+])
+def test_dm_means_private_only_where_the_host_proves_it(duty, home, monkeypatch, session_context, platform, chat_id, private):
+    """Some adapters label a shared conversation as "dm" (Slack groups im and
+    mpim together). Full details need a destination that is provably one-to-one."""
+    _settings(home, owner=OWNER)
+    _waiting(home)
+    _as_gateway_process(monkeypatch)
+    tokens = session_context.set_session_vars(platform=platform, user_id=OWNER, chat_type="dm", chat_id=chat_id)
+    try:
+        result = duty()
+    finally:
+        session_context.clear_session_vars(tokens)
+    assert ("OWNERTITLE" in result) is private
+    assert "1 waiting on you" in result
+
+
+def test_routed_profile_decides_owner_and_data(duty, home, tmp_path, monkeypatch, session_context):
+    """In a multi-profile gateway the host routes a chat to another profile
+    with a context-local home override; HERMES_HOME in the environment still
+    names the launch profile. The routed profile's owner and data apply."""
+    from tests.fixtures.make_home import make_home
+
+    _settings(home, owner=OWNER)
+    _waiting(home)
+    routed = make_home(tmp_path / "routed-profile")
+    (routed / "duty-board" / "settings.json").write_text(json.dumps({"owner": "999"}))
+    commands = sys.modules[duty.__module__]
+    monkeypatch.setattr(commands.board, "get_hermes_home", lambda: routed)
+    _as_gateway_process(monkeypatch)
+    tokens = session_context.set_session_vars(platform="discord", user_id=OWNER, chat_type="dm", chat_id="1")
+    try:
+        result = duty()
+    finally:
+        session_context.clear_session_vars(tokens)
+    assert "OWNERTITLE" not in result
+    assert "only available" in result

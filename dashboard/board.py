@@ -95,14 +95,22 @@ _cache: Dict[str, Any] = {"at": 0.0, "data": None, "home": None}
 
 
 def _home() -> Path:
-    override = os.environ.get("HERMES_HOME")
-    if override:
-        return Path(override).expanduser()
+    """The Hermes home this call belongs to.
+
+    Ask the host first: ``get_hermes_home`` honours the context-local override a
+    multi-profile gateway sets for the routed profile, then ``HERMES_HOME``. Reading
+    ``HERMES_HOME`` first would answer with the launch profile, and so with the
+    wrong owner, settings and data. Fall back to the environment only outside a
+    Hermes runtime.
+    """
     if get_hermes_home is not None:
         try:
             return Path(get_hermes_home())
         except Exception:
-            logger.debug("Hermes home lookup failed; using ~/.hermes", exc_info=True)
+            logger.debug("Hermes home lookup failed; using HERMES_HOME or ~/.hermes", exc_info=True)
+    override = os.environ.get("HERMES_HOME")
+    if override:
+        return Path(override).expanduser()
     return Path.home() / ".hermes"
 
 

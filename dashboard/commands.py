@@ -46,6 +46,20 @@ def _session_from_context(name: str):
 _session = _session_from_context
 
 
+def _private_destination(platform: str, chat_type: str, chat_id: str) -> bool:
+    """Whether the reply lands in a one-to-one conversation.
+
+    The host's ``chat_type == "dm"`` is not proof on every platform: Slack
+    reports group DMs (mpim) as "dm" too. Where the destination id tells
+    one-to-one apart, require it; Slack one-to-one IM channel ids start with D.
+    """
+    if chat_type != "dm":
+        return False
+    if platform == "slack":
+        return chat_id.startswith("D")
+    return True
+
+
 def _in_gateway() -> bool:
     """True only inside the running messaging gateway process.
 
@@ -106,8 +120,8 @@ def duty(raw_args: str = "") -> str:
             return message(locale, "configureOwner")
         if not local and user_id != owner:
             return message(locale, "ownerOnly")
-        full = local or chat_type == "dm"
-        if mode == "full" and chat_type in {"group", "channel", "thread"}:
+        full = local or _private_destination(platform, chat_type, _session("HERMES_SESSION_CHAT_ID") or "")
+        if mode == "full" and not full:
             full = settings.get("chat_full_in_channels") is True
         if mode == "counts":
             full = False
