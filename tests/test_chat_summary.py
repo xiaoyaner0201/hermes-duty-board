@@ -434,3 +434,15 @@ def test_language_comes_from_config_file_without_hermes_loader(commands, home, m
     (home / "config.yaml").write_text("model: x\ndisplay:\n  language: ja\n  skin: default\n", encoding="utf-8")
     caller(commands, monkeypatch, user="999")
     assert commands.duty() == commands.message("ja", "ownerOnly")
+
+
+def test_offline_guard_still_refuses_remote_hosts():
+    import socket
+    sock = socket.socket()
+    try:
+        with pytest.raises(AssertionError, match="network"):
+            sock.connect(("192.0.2.1", 80))
+        with pytest.raises(AssertionError, match="network"):
+            socket.create_connection(("example.org", 443))
+    finally:
+        sock.close()
