@@ -4,15 +4,30 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 ### Added
 
-- Model-free `/duty` chat summaries and `hermes duty` CLI (`--full`, `--counts`, `--lang`, `--json`), sharing the read-only dashboard collectors.
+- **`/duty` in chat and `hermes duty` in the terminal.** Both send the board as a short text summary: counts first, then what is waiting on you, what is running, results that never made it back, and cron problems, each with its place, age and a Discord jump link. No model is called; the summary reuses the dashboard's read-only collectors. The CLI takes `--full`, `--counts`, `--lang` and `--json`.
 - Chat strings and compact durations in all 17 locales, with pinned Python CLDR plural rules.
-- Owner-only chat access on Hermes 0.21.7+. Full details only in one-to-one DMs; groups, channels, threads and group DMs get counts unless explicitly opted in. The caller comes only from the host's per-call binding, never from the process environment, and the routed profile's own owner and settings apply in a multi-profile gateway. Mentions are neutralized; Markdown is escaped on Discord and made inert on surfaces that convert it (Telegram, Slack, Feishu). Details go only to platforms whose DM label provably means one-to-one; Matrix and unreviewed platforms get counts. Under `plugins.isolation: host` chat summaries refuse, because the plugin host does not forward the caller; the host does not register `hermes duty` either, so use the dashboard there. `DUTY_BOARD_OWNER` and `HERMES_LANGUAGE` come from the routed profile's scope, and language resolution never writes to the Hermes home.
-- Offline synthetic coverage for command registration, CLI output, access, privacy, rendering, locale fallback and settings-aware caching.
+
+### Security
+
+Chat summaries carry private conversation titles, so access is strict by default:
+
+- **Owner only.** The caller comes from the host's per-call session binding (Hermes 0.21.7+), never from the process environment. Older gateways refuse. Anyone else gets a one-line refusal, decided before any board data is read.
+- **Details only in a one-to-one DM.** Groups, channels, threads and group DMs get counts, unless the owner asks for `/duty full` there and `chat_full_in_channels` is `true`. One-to-one is trusted only where the platform's adapter proves it: Discord, Telegram, Feishu, Google Chat, Mattermost, and Slack IM channels. Matrix and unreviewed platforms get counts.
+- **Multi-profile gateways:** the routed profile's home, settings, `DUTY_BOARD_OWNER` and `HERMES_LANGUAGE` apply, never the launch profile's.
+- **`plugins.isolation: host`:** chat summaries refuse, because the plugin host does not forward the caller. The host does not register `hermes duty` either; use the dashboard there.
+- Mentions are neutralized. Markdown is escaped on Discord and made inert where the adapter converts it (Telegram, Slack, Feishu). Nothing is written to the Hermes home before authorization.
+
+### Changed
+
+- The collectors moved from `plugin_api.py` into a shared, stdlib-only `board.py`. The dashboard API returns the same JSON.
 
 ### Fixed
 
+- A delegation or conversation id such as `constructor` no longer shows its card as already dismissed ([#2](https://github.com/xiaoyaner0201/hermes-duty-board/issues/2)).
 - Improved Turkish dashboard wording after native-speaker review. Thanks to [@farukttbasar](https://github.com/farukttbasar) for the corrections ([#4](https://github.com/xiaoyaner0201/hermes-duty-board/pull/4)).
 
 ## [0.3.0] - 2026-10-14
@@ -56,6 +71,7 @@ First public release.
 - Discord links are built only from ASCII-digit ids.
 - Dismiss writes are serialised and capped at 2000 entries.
 
-[Unreleased]: https://github.com/xiaoyaner0201/hermes-duty-board/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/xiaoyaner0201/hermes-duty-board/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/xiaoyaner0201/hermes-duty-board/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/xiaoyaner0201/hermes-duty-board/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/xiaoyaner0201/hermes-duty-board/releases/tag/v0.2.1
