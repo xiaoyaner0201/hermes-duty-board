@@ -16,28 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture(autouse=True)
 def offline(monkeypatch):
     import os
-    import socket
 
     # Never authorize tests from the invoking agent's real chat context.
     for name in tuple(os.environ):
         if name.startswith("HERMES_SESSION_") or name in {"_HERMES_GATEWAY", "HERMES_LANGUAGE", "DUTY_BOARD_OWNER"}:
             monkeypatch.delenv(name, raising=False)
 
-    real_connect = socket.socket.connect
-
-    def loopback_only(sock, address, *args, **kwargs):
-        # Windows builds socket.socketpair() from a loopback TCP connect, and the
-        # Proactor event loop needs one for its self-pipe. Allow exactly that.
-        host = address[0] if isinstance(address, tuple) and address else None
-        if host in {"127.0.0.1", "::1"}:
-            return real_connect(sock, address, *args, **kwargs)
-        raise AssertionError("Tests may not access the network")
-
-    def refuse(*args, **kwargs):
-        raise AssertionError("Tests may not access the network")
-
-    monkeypatch.setattr(socket.socket, "connect", loopback_only)
-    monkeypatch.setattr(socket, "create_connection", refuse)
+    from tests.fixtures import offline as offline_guard
+    offline_guard.install(monkeypatch)
 
 
 @pytest.fixture

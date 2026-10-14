@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- **`/duty` in chat and `hermes duty` in the terminal.** Both send the board as a short text summary: counts first, then what is waiting on you, what is running, results that never made it back, and cron problems, each with its place, age and a Discord jump link. No model is called; the summary reuses the dashboard's read-only collectors. The CLI takes `--full`, `--counts`, `--lang` and `--json`.
+- **`/duty` in chat and `hermes duty` in the terminal.** Both send the board as a short text summary: counts first, then what is waiting on you, what is running, results that never made it back, and cron problems, each with its place and age. In a Discord DM each line also carries a jump link; other chats and the terminal show plain text, and `--json` keeps the raw links. No model is called; the summary reuses the dashboard's read-only collectors. The CLI takes `--full`, `--counts`, `--lang` and `--json`.
 - Chat strings and compact durations in all 17 locales, with pinned Python CLDR plural rules.
 
 ### Security

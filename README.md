@@ -116,7 +116,7 @@ This is a heuristic. You will see the odd false positive; *Seen* clears it. The 
 - **Read-only.** Opens `state.db` with SQLite `mode=ro` and reads `cron/jobs.json` and `gateway_state.json`.
 - **One file written, by dashboard dismissals only.** Chat/CLI commands never write or dismiss. The dashboard writes only its own dismiss list at `<HERMES_HOME>/duty-board/dismissed.json`.
 - **No network, no model calls, no credentials.** It never reads `.env`, `auth.json` or any token store.
-- **Chat privacy.** Only the configured owner can request a summary in messaging platforms. DMs show titles, places, ages and Discord web links; shared destinations show counts by default. Explicit channel opt-in can reveal private-conversation metadata to other participants. Other people’s hidden conversations stay hidden; mentions and Markdown are neutralized.
+- **Chat privacy.** Only the configured owner can request a summary in messaging platforms. DMs show titles, places and ages, plus web links on Discord; shared destinations show counts by default. Explicit channel opt-in can reveal private-conversation metadata to other participants. Other people’s hidden conversations stay hidden; mentions and Markdown are neutralized.
 - **Behind the dashboard's auth gate.** The API is mounted under `/api/plugins/duty-board/` like any other dashboard plugin.
 - **Stable for one Hermes version, not across all of them.** The plugin reads Hermes's internal tables. If a future Hermes release changes one, the affected section shows an empty list and a warning banner instead of breaking the page. Please open an issue when that happens.
 

@@ -446,3 +446,39 @@ def test_offline_guard_still_refuses_remote_hosts():
             socket.create_connection(("example.org", 443))
     finally:
         sock.close()
+
+
+def test_offline_guard_refuses_loopback_outside_socketpair():
+    """A product-code connect to a local service must still fail the suite."""
+    import socket
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    client = socket.socket()
+    try:
+        with pytest.raises(AssertionError, match="network"):
+            client.connect(server.getsockname())
+    finally:
+        client.close()
+        server.close()
+
+
+@pytest.mark.skipif(not hasattr(__import__("socket"), "_fallback_socketpair"), reason="no TCP socketpair fallback")
+def test_offline_guard_allows_the_windows_socketpair_fallback(monkeypatch):
+    """Simulate Windows, where socketpair() is a loopback TCP connect."""
+    import socket
+    from tests.fixtures import offline
+    offline.install(monkeypatch, socketpair=socket._fallback_socketpair)
+    left, right = socket.socketpair()
+    try:
+        left.sendall(b"x")
+        assert right.recv(1) == b"x"
+    finally:
+        left.close()
+        right.close()
+    probe = socket.socket()
+    try:
+        with pytest.raises(AssertionError, match="network"):
+            probe.connect(("127.0.0.1", 9))  # the exemption ended with the call
+    finally:
+        probe.close()
