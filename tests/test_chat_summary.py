@@ -187,7 +187,7 @@ def test_other_people_text_never_reaches_chat(commands, home, monkeypatch):
     add_lease(home, "other")
     conn = db(home)
     now = float((home / "fixture-now").read_text())
-    conn.execute("INSERT INTO async_delegations (delegation_id, state, delivery_state, dispatched_at, updated_at, task_json, result_json) VALUES ('secret', 'completed', 'dropped', ?, ?, ?, ?)", (now - 300, now - 100, json.dumps({"user_id": "999", "goal": "OTHERSECRET goal"}), json.dumps({"summary": "OTHERSECRET result"})))
+    conn.execute("INSERT INTO async_delegations (delegation_id, origin_session, state, delivery_state, dispatched_at, updated_at, task_json, result_json) VALUES ('secret', 'fictional-other-origin', 'completed', 'dropped', ?, ?, ?, ?)", (now - 300, now - 100, json.dumps({"user_id": "999", "goal": "OTHERSECRET goal"}), json.dumps({"summary": "OTHERSECRET result"})))
     conn.commit()
     conn.close()
     caller(commands, monkeypatch)
@@ -272,7 +272,7 @@ def test_untrusted_links_rejected(text):
 
 def test_sixty_waiting_bounded_with_more(commands, home, text):
     for n in range(60):
-        waiting(home, "wait" + str(n), "Long title " + "x" * 100)
+        waiting(home, "wait" + str(n), f"Long title {n:02d} " + "x" * 100)
     data = commands.board.build(float((home / "fixture-now").read_text()))
     result = render(text, data)
     assert len(result) <= 1900

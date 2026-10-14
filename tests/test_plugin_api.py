@@ -5,7 +5,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 
-from tests.fixtures.make_home import add_lease, add_message, add_session, db
+from tests.fixtures.make_home import add_lease, add_message, add_session, db, use_legacy_delegations
 
 
 def summary(client):
@@ -259,7 +259,8 @@ def test_string_false_does_not_disable_privacy(client, home):
 def test_delegations_work_without_origin_session_id(client, home):
     now = float((home / "fixture-now").read_text())
     conn = db(home)
-    conn.execute("ALTER TABLE async_delegations DROP COLUMN origin_session_id")
+    use_legacy_delegations(conn)
+    assert "origin_session_id" not in {row[1] for row in conn.execute("PRAGMA table_info(async_delegations)")}
     conn.execute(
         """INSERT INTO async_delegations (delegation_id, origin_session, state, delivery_state,
         dispatched_at, updated_at, task_json) VALUES ('d1', '', 'running', 'pending', ?, ?, ?)""",

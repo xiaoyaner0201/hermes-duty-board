@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+# Deliberately simplified schema, retained for focused schema-drift fixtures.
 SESSION_DDL = """
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY, source TEXT NOT NULL, user_id TEXT, session_key TEXT,
@@ -37,11 +38,33 @@ CREATE TABLE state_meta (key TEXT PRIMARY KEY, value TEXT);
 """
 
 
-def make_home(root: Path, *, now: Optional[float] = None) -> Path:
+RELEASE_SCHEMA = Path(__file__).with_name("hermes-v0.22.0.sql")
+
+# Deliberately legacy collector shape, not an ALTER of an arbitrary release.
+LEGACY_DELEGATION_DDL = """
+CREATE TABLE async_delegations (
+    delegation_id TEXT PRIMARY KEY, origin_session TEXT NOT NULL,
+    parent_session_id TEXT, state TEXT NOT NULL,
+    delivery_state TEXT NOT NULL DEFAULT 'pending',
+    dispatched_at REAL NOT NULL, completed_at REAL, updated_at REAL NOT NULL,
+    task_json TEXT, result_json TEXT
+);
+"""
+
+
+def use_legacy_delegations(conn: sqlite3.Connection) -> None:
+    """Replace only the synthetic delegation table with a known legacy shape."""
+    conn.execute("DROP TABLE async_delegations")
+    conn.executescript(LEGACY_DELEGATION_DDL)
+
+
+def make_home(root: Path, *, now: Optional[float] = None, schema: str = "release") -> Path:
+    if schema not in {"release", "simplified"}:
+        raise ValueError(f"Unknown fixture schema: {schema}")
     root.mkdir(parents=True, exist_ok=True)
     stamp = float(now if now is not None else time.time())
     conn = sqlite3.connect(root / "state.db")
-    conn.executescript(SESSION_DDL)
+    conn.executescript(RELEASE_SCHEMA.read_text(encoding="utf-8") if schema == "release" else SESSION_DDL)
     conn.commit()
     conn.close()
     (root / "cron").mkdir()
