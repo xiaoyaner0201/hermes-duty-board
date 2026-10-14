@@ -297,7 +297,7 @@ def test_collector_failure_is_a_code_not_an_exception_message(client, home, monk
     def boom(now):
         raise RuntimeError("/private/path/that/must/not/leak")
 
-    monkeypatch.setattr(api_module, "_collect_cron", boom)
+    monkeypatch.setattr(api_module.board, "_collect_cron", boom)
     data = summary(client)
     assert {"section": "cron", "code": "collectorFailed", "detail": "RuntimeError"} in data["issues"]
     assert "/private/path" not in json.dumps(data)
