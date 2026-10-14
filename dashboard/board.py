@@ -28,10 +28,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-try:
-    from hermes_constants import get_hermes_home
-except Exception:  # pragma: no cover - only outside a Hermes runtime
-    get_hermes_home = None  # type: ignore[assignment]
+# Optional host home resolver is supplied by adapters, keeping this module
+# strictly stdlib-only while preserving context-local Hermes homes.
+get_hermes_home: Optional[Callable[[], Path]] = None
 
 
 __version__ = "0.4.0"
@@ -842,5 +841,3 @@ def cached_summary(*, settings=None) -> Dict[str, Any]:
     with _cache_lock:
         _cache.update(at=now, data=data, home=home)
     return data
-
-

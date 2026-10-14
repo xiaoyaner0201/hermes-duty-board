@@ -20,6 +20,11 @@ assert _spec and _spec.loader
 board = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = board
 _spec.loader.exec_module(board)
+try:
+    from hermes_constants import get_hermes_home
+    board.get_hermes_home = get_hermes_home
+except ImportError:  # outside Hermes
+    pass
 router = APIRouter()
 _cache = board._cache
 

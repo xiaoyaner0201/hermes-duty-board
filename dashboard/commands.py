@@ -12,6 +12,12 @@ from .summary_text import choose_locale, message, render_summary
 
 logger = logging.getLogger(__name__)
 
+try:
+    from hermes_constants import get_hermes_home
+    board.get_hermes_home = get_hermes_home
+except ImportError:  # outside Hermes
+    pass
+
 
 def _session(name: str) -> str:
     try:
@@ -46,8 +52,9 @@ def _error(locale, exc):
 def duty(raw_args: str = "") -> str:
     locale = "en"
     try:
-        mode, explicit = _arguments(raw_args)
         settings = board._settings()
+        locale = choose_locale(settings=settings)
+        mode, explicit = _arguments(raw_args)
         locale = choose_locale(explicit, settings)
         platform = _session("HERMES_SESSION_PLATFORM").lower()
         user_id = _session("HERMES_SESSION_USER_ID")

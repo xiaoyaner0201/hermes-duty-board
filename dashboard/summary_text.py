@@ -47,6 +47,8 @@ def plural_category(locale: str, number) -> str:
             return "few"
         return "many"
     if locale == "ga":
+        if v != 0:
+            return "other"
         return "one" if n == 1 else "two" if n == 2 else "few" if 3 <= n <= 6 else "many" if 7 <= n <= 10 else "other"
     if locale == "ar":
         if n == 0:
@@ -55,9 +57,9 @@ def plural_category(locale: str, number) -> str:
             return "one"
         if n == 2:
             return "two"
-        if 3 <= n % 100 <= 10:
+        if v == 0 and 3 <= n % 100 <= 10:
             return "few"
-        if 11 <= n % 100 <= 99:
+        if v == 0 and 11 <= n % 100 <= 99:
             return "many"
     return "other"
 
