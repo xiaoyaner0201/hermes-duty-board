@@ -133,5 +133,54 @@
     "bluebubbles": "iMessage",
     "email": "E-Mail",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "Im Moment braucht nichts deine Aufmerksamkeit.",
+    "ownerOnly": "Diese Zusammenfassung steht nur dem Eigentümer der Arbeitsübersicht zur Verfügung.",
+    "configureOwner": "Lege vor der Nutzung im Chat owner in duty-board/settings.json fest.",
+    "oldHost": "Dieser Befehl erfordert im Chat Hermes 0.21.7 oder neuer.",
+    "dmHint": "Schreibe dem Bot eine Direktnachricht oder öffne das Dashboard für Details.",
+    "error": "Arbeitsübersicht nicht verfügbar ({error}).",
+    "stalled": "{age} (stockt)",
+    "privatePlace": "Privates Gespräch",
+    "untitled": "Ohne Titel",
+    "localPlace": "Lokal",
+    "waitingHeading": "Wartet auf dich (einschließlich unbeantworteter Nachrichten)",
+    "cronHeading": "Cron-Probleme",
+    "units": {
+      "minute": "Min.",
+      "hour": "Std.",
+      "day": "T."
+    },
+    "headline": "Arbeitsübersicht · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Inhalt ausgeblendet",
+    "runningHeading": "Läuft",
+    "droppedHeading": "Fertig, Ergebnis nicht zugestellt",
+    "goalsHeading": "Langfristige Ziele",
+    "waitingCount": {
+      "one": "{count} wartet auf dich",
+      "other": "{count} warten auf dich"
+    },
+    "runningCount": {
+      "one": "{count} läuft",
+      "other": "{count} laufen"
+    },
+    "droppedCount": {
+      "one": "{count} nicht zugestelltes Ergebnis",
+      "other": "{count} nicht zugestellte Ergebnisse"
+    },
+    "cronCount": {
+      "one": "{count} Cron-Problem",
+      "other": "{count} Cron-Probleme"
+    },
+    "goalsCount": {
+      "one": "{count} dauerhaftes Ziel",
+      "other": "{count} dauerhafte Ziele"
+    },
+    "more": {
+      "one": "+{count} weitere",
+      "other": "+{count} weitere"
+    }
   }
 }

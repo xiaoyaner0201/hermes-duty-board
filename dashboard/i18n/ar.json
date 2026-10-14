@@ -153,5 +153,78 @@
     "bluebubbles": "iMessage",
     "email": "البريد الإلكتروني",
     "sms": "الرسائل النصية"
+  },
+  "chat": {
+    "empty": "لا شيء يحتاج إلى انتباهك الآن.",
+    "ownerOnly": "هذا الملخص متاح لمالك لوحة المناوبة فقط.",
+    "configureOwner": "اضبط owner في duty-board/settings.json قبل استخدام هذا الأمر في الدردشة.",
+    "oldHost": "يتطلب هذا الأمر Hermes 0.21.7 أو أحدث في الدردشة.",
+    "dmHint": "راسل البوت على الخاص أو افتح لوحة التحكم للاطلاع على التفاصيل.",
+    "error": "لوحة المناوبة غير متاحة ({error}).",
+    "stalled": "{age} (متوقف)",
+    "privatePlace": "محادثة خاصة",
+    "untitled": "بلا عنوان",
+    "localPlace": "محلي",
+    "waitingHeading": "بانتظارك (بما في ذلك الرسائل بلا رد)",
+    "cronHeading": "مشكلات المهام المجدولة",
+    "units": {
+      "minute": "د",
+      "hour": "س",
+      "day": "ي"
+    },
+    "headline": "لوحة المناوبة · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "المحتوى مخفي",
+    "runningHeading": "قيد التنفيذ",
+    "droppedHeading": "اكتملت، لكن لم تُسلَّم النتيجة",
+    "goalsHeading": "أهداف طويلة الأجل",
+    "waitingCount": {
+      "zero": "{count} بانتظارك",
+      "one": "{count} بانتظارك",
+      "two": "{count} بانتظارك",
+      "few": "{count} بانتظارك",
+      "many": "{count} بانتظارك",
+      "other": "{count} بانتظارك"
+    },
+    "runningCount": {
+      "zero": "{count} قيد التنفيذ",
+      "one": "{count} قيد التنفيذ",
+      "two": "{count} قيد التنفيذ",
+      "few": "{count} قيد التنفيذ",
+      "many": "{count} قيد التنفيذ",
+      "other": "{count} قيد التنفيذ"
+    },
+    "droppedCount": {
+      "zero": "{count} من النتائج غير المسلّمة",
+      "one": "{count} نتيجة غير مسلّمة",
+      "two": "نتيجتان غير مسلّمتين ({count})",
+      "few": "{count} نتائج غير مسلّمة",
+      "many": "{count} نتيجة غير مسلّمة",
+      "other": "{count} من النتائج غير المسلّمة"
+    },
+    "cronCount": {
+      "zero": "{count} من مشكلات المهام المجدولة",
+      "one": "{count} مشكلة في مهمة مجدولة",
+      "two": "مشكلتان في المهام المجدولة ({count})",
+      "few": "{count} مشكلات في المهام المجدولة",
+      "many": "{count} مشكلة في المهام المجدولة",
+      "other": "{count} من مشكلات المهام المجدولة"
+    },
+    "goalsCount": {
+      "zero": "{count} من الأهداف الدائمة",
+      "one": "{count} هدف دائم",
+      "two": "هدفان دائمان ({count})",
+      "few": "{count} أهداف دائمة",
+      "many": "{count} هدفًا دائمًا",
+      "other": "{count} من الأهداف الدائمة"
+    },
+    "more": {
+      "zero": "{count} إضافية",
+      "one": "{count} إضافية",
+      "two": "{count} إضافية",
+      "few": "{count} إضافية",
+      "many": "{count} إضافية",
+      "other": "{count} إضافية"
+    }
   }
 }

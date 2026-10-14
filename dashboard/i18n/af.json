@@ -133,5 +133,54 @@
     "bluebubbles": "iMessage",
     "email": "E-pos",
     "sms": "Teksboodskappe"
+  },
+  "chat": {
+    "empty": "Niks het nou jou aandag nodig nie.",
+    "ownerOnly": "Hierdie opsomming is slegs vir die bord se eienaar beskikbaar.",
+    "configureOwner": "Stel owner in duty-board/settings.json voordat jy hierdie opdrag in klets gebruik.",
+    "oldHost": "Hierdie opdrag vereis Hermes 0.21.7 of nuwer in klets.",
+    "dmHint": "Stuur ’n privaatboodskap aan die bot of maak die kontrolepaneel oop vir besonderhede.",
+    "error": "Diensbord nie beskikbaar nie ({error}).",
+    "stalled": "{age} (vasgeval)",
+    "privatePlace": "Privaat gesprek",
+    "untitled": "Naamloos",
+    "localPlace": "Plaaslik",
+    "waitingHeading": "Wag op jou (insluitend onbeantwoorde boodskappe)",
+    "cronHeading": "Probleme met geskeduleerde take",
+    "units": {
+      "minute": "min",
+      "hour": "u",
+      "day": "d"
+    },
+    "headline": "Diensbord · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Inhoud versteek",
+    "runningHeading": "Loop",
+    "droppedHeading": "Voltooi, maar die resultaat is nie afgelewer nie",
+    "goalsHeading": "Langtermyndoelwitte",
+    "waitingCount": {
+      "one": "{count} wag op jou",
+      "other": "{count} wag op jou"
+    },
+    "runningCount": {
+      "one": "{count} loop",
+      "other": "{count} loop"
+    },
+    "droppedCount": {
+      "one": "{count} onafgelewerde resultaat",
+      "other": "{count} onafgelewerde resultate"
+    },
+    "cronCount": {
+      "one": "{count} geskeduleerde taakprobleem",
+      "other": "{count} geskeduleerde taakprobleme"
+    },
+    "goalsCount": {
+      "one": "{count} deurlopende doelwit",
+      "other": "{count} deurlopende doelwitte"
+    },
+    "more": {
+      "one": "+{count} meer",
+      "other": "+{count} meer"
+    }
   }
 }

@@ -133,5 +133,54 @@
     "bluebubbles": "iMessage",
     "email": "E-posta",
     "sms": "Kısa mesaj"
+  },
+  "chat": {
+    "empty": "Şu anda ilgilenmeniz gereken bir şey yok.",
+    "ownerOnly": "Bu özet yalnızca panonun sahibine açıktır.",
+    "configureOwner": "Bu komutu sohbette kullanmadan önce duty-board/settings.json içinde owner ayarlayın.",
+    "oldHost": "Bu komutu sohbette kullanmak için Hermes 0.21.7 veya üzeri gerekir.",
+    "dmHint": "Ayrıntılar için bota özel mesaj gönderin veya gösterge panelini açın.",
+    "error": "İzleme panosu kullanılamıyor ({error}).",
+    "stalled": "{age} (takıldı)",
+    "privatePlace": "Özel sohbet",
+    "untitled": "Başlıksız",
+    "localPlace": "Yerel",
+    "waitingHeading": "Yanıtınız bekleniyor (yanıtsız mesajlar dahil)",
+    "cronHeading": "Zamanlanmış görev sorunları",
+    "units": {
+      "minute": "dk",
+      "hour": "sa",
+      "day": "g"
+    },
+    "headline": "İzleme panosu · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "İçerik gizlendi",
+    "runningHeading": "Çalışıyor",
+    "droppedHeading": "Tamamlandı, ancak sonuç iletilmedi",
+    "goalsHeading": "Uzun vadeli hedefler",
+    "waitingCount": {
+      "one": "{count} yanıtınızı bekliyor",
+      "other": "{count} yanıtınızı bekliyor"
+    },
+    "runningCount": {
+      "one": "{count} çalışıyor",
+      "other": "{count} çalışıyor"
+    },
+    "droppedCount": {
+      "one": "{count} teslim edilmemiş sonuç",
+      "other": "{count} teslim edilmemiş sonuç"
+    },
+    "cronCount": {
+      "one": "{count} zamanlanmış görev sorunu",
+      "other": "{count} zamanlanmış görev sorunu"
+    },
+    "goalsCount": {
+      "one": "{count} uzun vadeli hedef",
+      "other": "{count} uzun vadeli hedef"
+    },
+    "more": {
+      "one": "+{count} tane daha",
+      "other": "+{count} tane daha"
+    }
   }
 }

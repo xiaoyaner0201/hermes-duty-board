@@ -143,5 +143,66 @@
     "bluebubbles": "iMessage",
     "email": "Електронна пошта",
     "sms": "СМС"
+  },
+  "chat": {
+    "empty": "Зараз ніщо не потребує вашої уваги.",
+    "ownerOnly": "Цей огляд доступний лише власнику панелі.",
+    "configureOwner": "Задайте owner у duty-board/settings.json перед використанням команди в чаті.",
+    "oldHost": "Для цієї команди в чаті потрібен Hermes 0.21.7 або новіший.",
+    "dmHint": "Напишіть боту в особисті повідомлення або відкрийте панель для подробиць.",
+    "error": "Панель недоступна ({error}).",
+    "stalled": "{age} (зупинилося)",
+    "privatePlace": "Приватна розмова",
+    "untitled": "Без назви",
+    "localPlace": "Локально",
+    "waitingHeading": "Чекають на вас (включно з повідомленнями без відповіді)",
+    "cronHeading": "Проблеми завдань за розкладом",
+    "units": {
+      "minute": "хв",
+      "hour": "год",
+      "day": "дн"
+    },
+    "headline": "Панель чергового · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Вміст приховано",
+    "runningHeading": "Виконуються",
+    "droppedHeading": "Завершено, але результат не доставлено",
+    "goalsHeading": "Довгострокові цілі",
+    "waitingCount": {
+      "one": "{count} чекає на вас",
+      "few": "{count} чекають на вас",
+      "many": "{count} чекають на вас",
+      "other": "{count} чекають на вас"
+    },
+    "runningCount": {
+      "one": "{count} виконується",
+      "few": "{count} виконуються",
+      "many": "{count} виконуються",
+      "other": "{count} виконуються"
+    },
+    "droppedCount": {
+      "one": "{count} недоставлений результат",
+      "few": "{count} недоставлені результати",
+      "many": "{count} недоставлених результатів",
+      "other": "{count} недоставлених результатів"
+    },
+    "cronCount": {
+      "one": "{count} проблема завдання за розкладом",
+      "few": "{count} проблеми завдань за розкладом",
+      "many": "{count} проблем завдань за розкладом",
+      "other": "{count} проблем завдань за розкладом"
+    },
+    "goalsCount": {
+      "one": "{count} постійна ціль",
+      "few": "{count} постійні цілі",
+      "many": "{count} постійних цілей",
+      "other": "{count} постійних цілей"
+    },
+    "more": {
+      "one": "Ще {count}",
+      "few": "Ще {count}",
+      "many": "Ще {count}",
+      "other": "Ще {count}"
+    }
   }
 }

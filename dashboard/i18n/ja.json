@@ -128,5 +128,48 @@
     "bluebubbles": "iMessage",
     "email": "メール",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "今は対応が必要なものはありません。",
+    "ownerOnly": "この概要は当番ボードの所有者だけが閲覧できます。",
+    "configureOwner": "チャットで使う前に duty-board/settings.json の owner を設定してください。",
+    "oldHost": "チャットでこのコマンドを使うには Hermes 0.21.7 以降が必要です。",
+    "dmHint": "詳細はボットへのDMかダッシュボードで確認してください。",
+    "error": "当番ボードを利用できません（{error}）。",
+    "stalled": "{age}（停滞）",
+    "privatePlace": "非公開の会話",
+    "untitled": "無題",
+    "localPlace": "ローカル",
+    "waitingHeading": "あなたの返信待ち（未回答を含む）",
+    "cronHeading": "定期ジョブの問題",
+    "units": {
+      "minute": "分",
+      "hour": "時間",
+      "day": "日"
+    },
+    "headline": "当番ボード · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "内容は非表示です",
+    "runningHeading": "実行中",
+    "droppedHeading": "完了しましたが、結果を元の会話に届けられませんでした",
+    "goalsHeading": "長期目標",
+    "waitingCount": {
+      "other": "{count}件が返信待ち"
+    },
+    "runningCount": {
+      "other": "{count}件が実行中"
+    },
+    "droppedCount": {
+      "other": "{count}件の未配信結果"
+    },
+    "cronCount": {
+      "other": "定期ジョブの問題{count}件"
+    },
+    "goalsCount": {
+      "other": "{count}件の継続目標"
+    },
+    "more": {
+      "other": "ほか{count}件"
+    }
   }
 }

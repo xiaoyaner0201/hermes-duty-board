@@ -138,5 +138,60 @@
     "bluebubbles": "iMessage",
     "email": "Posta elettronica",
     "sms": "SMS"
+  },
+  "chat": {
+    "empty": "Al momento nulla richiede la tua attenzione.",
+    "ownerOnly": "Questo riepilogo è disponibile solo al proprietario del pannello.",
+    "configureOwner": "Imposta owner in duty-board/settings.json prima di usare questo comando in chat.",
+    "oldHost": "Questo comando richiede Hermes 0.21.7 o successivo in chat.",
+    "dmHint": "Scrivi al bot in privato o apri il pannello per i dettagli.",
+    "error": "Pannello non disponibile ({error}).",
+    "stalled": "{age} (bloccato)",
+    "privatePlace": "Conversazione privata",
+    "untitled": "Senza titolo",
+    "localPlace": "In locale",
+    "waitingHeading": "In attesa di te (inclusi i messaggi senza risposta)",
+    "cronHeading": "Problemi delle attività pianificate",
+    "units": {
+      "minute": "min",
+      "hour": "h",
+      "day": "g"
+    },
+    "headline": "Bacheca attività · {waiting} · {running} · {cron}",
+    "item": "{title} · {place} · {age}",
+    "hidden": "Contenuto nascosto",
+    "runningHeading": "In esecuzione",
+    "droppedHeading": "Completata, risultato non consegnato",
+    "goalsHeading": "Obiettivi a lungo termine",
+    "waitingCount": {
+      "one": "{count} in attesa di te",
+      "many": "{count} in attesa di te",
+      "other": "{count} in attesa di te"
+    },
+    "runningCount": {
+      "one": "{count} in esecuzione",
+      "many": "{count} in esecuzione",
+      "other": "{count} in esecuzione"
+    },
+    "droppedCount": {
+      "one": "{count} risultato non consegnato",
+      "many": "{count} risultati non consegnati",
+      "other": "{count} risultati non consegnati"
+    },
+    "cronCount": {
+      "one": "{count} problema di attività pianificata",
+      "many": "{count} problemi di attività pianificate",
+      "other": "{count} problemi di attività pianificate"
+    },
+    "goalsCount": {
+      "one": "{count} obiettivo permanente",
+      "many": "{count} obiettivi permanenti",
+      "other": "{count} obiettivi permanenti"
+    },
+    "more": {
+      "one": "+{count} altri",
+      "many": "+{count} altri",
+      "other": "+{count} altri"
+    }
   }
 }
