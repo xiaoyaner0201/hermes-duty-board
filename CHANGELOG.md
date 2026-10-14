@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Improved Turkish dashboard wording after native-speaker review. Thanks to [@farukttbasar](https://github.com/farukttbasar) for the corrections ([#4](https://github.com/xiaoyaner0201/hermes-duty-board/pull/4)).
+
 ## [0.3.0] - 2026-10-14
 
 ### Added
