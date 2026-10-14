@@ -6,6 +6,7 @@ import importlib
 import inspect
 import json
 import re
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -407,3 +408,29 @@ def test_plain_fields_stay_inert_on_converting_surfaces(text, platform, payload)
     for delimiter in ("||", "**", "`", "~~", "__", "*", "_"):
         assert delimiter not in line, (delimiter, line)
     assert payload.strip("|*`~_") in line
+
+
+def test_refusal_never_touches_the_home(commands, home, monkeypatch):
+    """Resolving the language must not create files. Hermes's language lookup
+    reads config through a loader that creates the home's skeleton (SOUL.md,
+    directories); a refused stranger must leave no trace."""
+    settings(home, owner=OWNER)
+    calls = []
+    i18n = type(sys)("agent.i18n")
+    i18n.get_language = lambda: calls.append("get_language") or "en"
+    agent = type(sys)("agent")
+    agent.i18n = i18n
+    monkeypatch.setitem(sys.modules, "agent", agent)
+    monkeypatch.setitem(sys.modules, "agent.i18n", i18n)
+    caller(commands, monkeypatch, user="999")
+    before = sorted(str(p.relative_to(home)) for p in home.rglob("*"))
+    assert "only available" in commands.duty()
+    assert sorted(str(p.relative_to(home)) for p in home.rglob("*")) == before
+    assert calls == []
+
+
+def test_language_comes_from_config_file_without_hermes_loader(commands, home, monkeypatch):
+    settings(home, owner=OWNER)
+    (home / "config.yaml").write_text("model: x\ndisplay:\n  language: ja\n  skin: default\n", encoding="utf-8")
+    caller(commands, monkeypatch, user="999")
+    assert commands.duty() == commands.message("ja", "ownerOnly")

@@ -61,22 +61,37 @@ def test_all_locales_render(text, locale):
     assert text.message(locale, "more", count=52)
 
 
-def test_language_host_fallback_and_explicit_precedence(text, monkeypatch):
-    fake_agent = ModuleType("agent")
-    fake_i18n = ModuleType("agent.i18n")
-    fake_i18n.get_language = lambda: "ja"
-    monkeypatch.setitem(sys.modules, "agent", fake_agent)
-    monkeypatch.setitem(sys.modules, "agent.i18n", fake_i18n)
-    assert text.choose_locale() == "ja"
-    assert text.choose_locale(settings={"chat_language": "zh"}) == "zh"
-    assert text.choose_locale("de", {"chat_language": "zh"}) == "de"
-
-    def fail():
-        raise RuntimeError("unavailable")
-    fake_i18n.get_language = fail
-    assert text.choose_locale() == "en"
+def test_language_host_fallback_and_explicit_precedence(text, tmp_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, "agent.secret_scope", None)  # no host: read the environment
+    monkeypatch.delenv("HERMES_LANGUAGE", raising=False)
+    (tmp_path / "config.yaml").write_text("display:\n  skin: x\n  language: ja  # set by setup\n", encoding="utf-8")
+    assert text.choose_locale(home=tmp_path) == "ja"
+    assert text.choose_locale(settings={"chat_language": "zh"}, home=tmp_path) == "zh"
+    assert text.choose_locale("de", {"chat_language": "zh"}, tmp_path) == "de"
+    monkeypatch.setenv("HERMES_LANGUAGE", "ko")
+    assert text.choose_locale(home=tmp_path) == "ko"
+    monkeypatch.delenv("HERMES_LANGUAGE")
+    (tmp_path / "config.yaml").write_text("display: {language: ja}\nlanguage: fr\n", encoding="utf-8")
+    assert text.choose_locale(home=tmp_path) == "en"  # flow style and other sections are not guessed
+    (tmp_path / "config.yaml").write_bytes(b"\xff\xfe")
+    assert text.choose_locale(home=tmp_path) == "en"
+    assert text.choose_locale(home=tmp_path / "missing") == "en"
     assert text.duration(5 * 60, "zh") == "5分钟"
     assert text.duration(3 * 86400 + 4 * 3600, "en") == "3d 4h"
+
+
+def test_language_uses_the_hosts_scoped_secret(text, tmp_path, monkeypatch):
+    scope = ModuleType("agent.secret_scope")
+    scope.get_secret = lambda name, default=None: "uk" if name == "HERMES_LANGUAGE" else default
+    monkeypatch.setitem(sys.modules, "agent.secret_scope", scope)
+    monkeypatch.setenv("HERMES_LANGUAGE", "ja")  # the launch profile's value must not win
+    assert text.choose_locale(home=tmp_path) == "uk"
+
+    def unscoped(name, default=None):
+        raise RuntimeError("no profile secret scope while multiplexing")
+    scope.get_secret = unscoped
+    (tmp_path / "config.yaml").write_text("display:\n  language: it\n", encoding="utf-8")
+    assert text.choose_locale(home=tmp_path) == "it"
 
 
 def test_slash_language_arguments(commands, home):

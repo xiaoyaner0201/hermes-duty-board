@@ -25,6 +25,11 @@ try:
     board.get_hermes_home = get_hermes_home
 except ImportError:  # outside Hermes
     pass
+try:
+    from agent.secret_scope import get_secret
+    board.get_secret = get_secret
+except ImportError:  # outside Hermes, or a host without profile-scoped secrets
+    pass
 router = APIRouter()
 _cache = board._cache
 

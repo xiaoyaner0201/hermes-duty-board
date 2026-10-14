@@ -31,6 +31,9 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 # Optional host home resolver is supplied by adapters, keeping this module
 # strictly stdlib-only while preserving context-local Hermes homes.
 get_hermes_home: Optional[Callable[[], Path]] = None
+# Optional host secret resolver, ``get_secret(name, default)``. Hermes scopes
+# ``.env`` values to the routed profile; without it, ``os.environ`` is the source.
+get_secret: Optional[Callable[..., Optional[str]]] = None
 
 
 __version__ = "0.4.0"
@@ -145,9 +148,26 @@ def _strict_bool(raw: Any, default: bool) -> bool:
     return raw if isinstance(raw, bool) else default
 
 
+def _owner_override() -> Optional[str]:
+    """``DUTY_BOARD_OWNER`` for the profile this call serves.
+
+    In a multi-profile gateway the launch environment belongs to the launch
+    profile; the host's secret scope answers for the routed one (``None`` when
+    that profile does not set it). Any failure there, including an unscoped read
+    while multiplexing, means "no override": settings.json decides.
+    """
+    if get_secret is not None:
+        try:
+            return get_secret("DUTY_BOARD_OWNER", None)
+        except Exception:
+            logger.debug("Scoped DUTY_BOARD_OWNER lookup failed; using settings.json", exc_info=True)
+            return None
+    return os.environ.get("DUTY_BOARD_OWNER")
+
+
 def _runtime_settings(raw=None) -> Dict[str, Any]:
     raw = _settings() if raw is None else raw
-    env_owner = os.environ.get("DUTY_BOARD_OWNER")
+    env_owner = _owner_override()
     owner = env_owner if env_owner is not None else raw.get("owner")
     owner = str(owner).strip() if owner is not None else ""
     sources = raw.get("messaging_sources", DEFAULTS["messaging_sources"])

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from decimal import Decimal
 from functools import lru_cache
@@ -76,14 +77,55 @@ def message(locale: str, key: str, **values) -> str:
     return value.format(**values)
 
 
-def choose_locale(explicit=None, settings=None) -> str:
+_LANGUAGE_LINE = re.compile(r"""^\s+language\s*:\s*["']?([A-Za-z_-]{2,16})["']?\s*(?:#.*)?$""")
+
+
+def hermes_language(home=None) -> str:
+    """Hermes's language for this profile, read without side effects.
+
+    ``HERMES_LANGUAGE`` (through the host's profile-scoped secret lookup when
+    there is one), then ``display.language`` in ``<home>/config.yaml``. Hermes's
+    own ``get_language()`` is not used: its config loader creates the home's
+    skeleton (directories, SOUL.md) on first use, and this path runs before the
+    caller is authorized. Only the plain block form ``display:`` /
+    ``  language: xx`` is recognised; anything else falls back to English.
+    """
+    try:
+        from agent.secret_scope import get_secret
+        value = get_secret("HERMES_LANGUAGE", None)
+    except ImportError:
+        value = os.environ.get("HERMES_LANGUAGE")
+    except Exception:
+        value = None
+    if value:
+        return str(value)
+    if home is None:
+        return "en"
+    try:
+        lines = (Path(home) / "config.yaml").read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return "en"
+    in_display = False
+    for line in lines:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line[0].isspace():
+            in_display = line.split("#", 1)[0].strip() == "display:"
+            continue
+        if in_display:
+            match = _LANGUAGE_LINE.match(line)
+            if match:
+                return match.group(1)
+    return "en"
+
+
+def choose_locale(explicit=None, settings=None, home=None) -> str:
     if explicit:
         return locale_name(explicit)
     if settings and settings.get("chat_language"):
         return locale_name(settings["chat_language"])
     try:
-        from agent.i18n import get_language
-        return locale_name(get_language())
+        return locale_name(hermes_language(home))
     except Exception:
         return "en"
 
