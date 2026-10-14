@@ -60,9 +60,10 @@ hermes dashboard --stop && hermes dashboard
 `/duty` は Discord などの Hermes チャットで短い概要を返信します。モデルは呼びません。`hermes duty` は同じ概要をローカル端末に表示し、`hermes duty --json` はスクリプト用に元のボード JSON を出力します。
 
 - **チャットには Hermes 0.21.7 以降が必要**です。呼び出し元とセッションを確実に識別できない旧版ゲートウェイでは拒否します。端末コマンドとローカル CLI/TUI の `/duty` は **0.21.1 以降**で使えます。
-- **チャットでは所有者のみ**。`<HERMES_HOME>/duty-board/settings.json` の `owner` にプラットフォームのユーザー ID を設定します（`DUTY_BOARD_OWNER` でも可）。他のユーザーはボードを読む前に拒否します。ローカル CLI/TUI はそのホームを読めるローカルアカウントを信頼するため、プラットフォーム ID は不要です。
-- **1 対 1 の DM は詳細を表示。グループ・チャンネル・スレッド・グループ DM は既定で件数のみ**で、タイトル・引用・リンクは表示しません（Slack はグループ DM も DM として報告するため、ID が `D` で始まる 1 対 1 の会話だけを信頼します）。そこで `/duty full` を使うと、`"chat_full_in_channels": true` を明示的に設定しない限り、DM の案内を表示します。有効化しても既定は件数のみです。有効化すると、他の非公開会話のタイトルや場所が返信先の参加者全員に見える可能性があります。
-- `/duty counts`、`/duty full lang=zh`、`hermes duty --counts`、`hermes duty --full --lang ja` が使えます。言語は明示引数、設定の `chat_language`、Hermes の `display.language`、英語の順で選びます。チャットと CLI は全 17 言語に対応します。
+- **`plugins.isolation: host` ではチャット要約を使えません**。プラグインホストはコマンドの引数だけを転送し、送信者を転送しないため、`/duty` は拒否します。`hermes duty` とダッシュボードは使えます。
+- **チャットでは所有者のみ**。`<HERMES_HOME>/duty-board/settings.json` の `owner` にプラットフォームのユーザー ID を設定します（`DUTY_BOARD_OWNER` でも可。マルチプロファイルのゲートウェイでは、ルーティング先プロファイル自身の `.env` から読みます）。他のユーザーはボードを読む前に拒否します。ローカル CLI/TUI はそのホームを読めるローカルアカウントを信頼するため、プラットフォーム ID は不要です。
+- **1 対 1 の DM は詳細を表示。グループ・チャンネル・スレッド・グループ DM は既定で件数のみ**で、タイトル・引用・リンクは表示しません。詳細を出すのは、プラットフォームが 1 対 1 を保証できる場合だけです：Discord、Telegram、Feishu、Google Chat、Mattermost、ID が `D` で始まる Slack の DM（Slack はグループ DM も DM と報告します）。Matrix（`m.direct` のルームは 3 人以上のこともあります）とその他のプラットフォームは件数のみです。そこで `/duty full` を使うと、`"chat_full_in_channels": true` を明示的に設定しない限り、DM の案内を表示します。有効化しても既定は件数のみです。有効化すると、他の非公開会話のタイトルや場所が返信先の参加者全員に見える可能性があります。
+- `/duty counts`、`/duty full lang=zh`、`hermes duty --counts`、`hermes duty --full --lang ja` が使えます。言語は明示引数、設定の `chat_language`、`HERMES_LANGUAGE`、Hermes の `display.language`（`config.yaml` のブロック形式）、英語の順で選びます。チャットと CLI は全 17 言語に対応します。
 
 架空の `dev/demo_home.py` ホームからのチャンネル返信（実行結果そのまま）：
 

@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Model-free `/duty` chat summaries and `hermes duty` CLI (`--full`, `--counts`, `--lang`, `--json`), sharing the read-only dashboard collectors.
 - Chat strings and compact durations in all 17 locales, with pinned Python CLDR plural rules.
-- Owner-only chat access on Hermes 0.21.7+. Full details only in one-to-one DMs; groups, channels, threads and group DMs get counts unless explicitly opted in. The caller comes only from the host's per-call binding, never from the process environment, and the routed profile's own owner and settings apply in a multi-profile gateway. Mentions are neutralized; Markdown is escaped on Discord and made inert on surfaces that convert it (Telegram, Slack, Feishu).
+- Owner-only chat access on Hermes 0.21.7+. Full details only in one-to-one DMs; groups, channels, threads and group DMs get counts unless explicitly opted in. The caller comes only from the host's per-call binding, never from the process environment, and the routed profile's own owner and settings apply in a multi-profile gateway. Mentions are neutralized; Markdown is escaped on Discord and made inert on surfaces that convert it (Telegram, Slack, Feishu). Details go only to platforms whose DM label provably means one-to-one; Matrix and unreviewed platforms get counts. Under `plugins.isolation: host` chat summaries refuse, because the plugin host does not forward the caller. `DUTY_BOARD_OWNER` and `HERMES_LANGUAGE` come from the routed profile's scope, and language resolution never writes to the Hermes home.
 - Offline synthetic coverage for command registration, CLI output, access, privacy, rendering, locale fallback and settings-aware caching.
 
 ### Fixed
