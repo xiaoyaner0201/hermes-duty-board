@@ -140,6 +140,7 @@
     "ownerOnly": "This summary is only available to the board’s owner.",
     "configureOwner": "Set owner in duty-board/settings.json before using this command in chat.",
     "oldHost": "This command needs Hermes 0.21.7 or newer in chat.",
+    "isolated": "Chat summaries are unavailable while plugins run in a separate process (plugins.isolation: host): the caller cannot be verified there. Use hermes duty or the dashboard.",
     "dmHint": "DM the bot or open the dashboard for details.",
     "error": "Duty Board unavailable ({error}).",
     "item": "{title} · {place} · {age}",

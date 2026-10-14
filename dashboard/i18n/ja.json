@@ -134,6 +134,7 @@
     "ownerOnly": "この概要は当番ボードの所有者だけが閲覧できます。",
     "configureOwner": "チャットで使う前に duty-board/settings.json の owner を設定してください。",
     "oldHost": "チャットでこのコマンドを使うには Hermes 0.21.7 以降が必要です。",
+    "isolated": "プラグインを別プロセスで実行している間（plugins.isolation: host）はチャット要約を使えません。そこでは呼び出し元を確認できないためです。hermes duty かダッシュボードを使ってください。",
     "dmHint": "詳細はボットへのDMかダッシュボードで確認してください。",
     "error": "当番ボードを利用できません（{error}）。",
     "stalled": "{age}（停滞）",

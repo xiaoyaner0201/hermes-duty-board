@@ -154,6 +154,7 @@
     "ownerOnly": "Níl an achoimre seo ar fáil ach d’úinéir an bhoird.",
     "configureOwner": "Socraigh owner in duty-board/settings.json sula n-úsáideann tú an t-ordú seo sa chomhrá.",
     "oldHost": "Teastaíonn Hermes 0.21.7 nó níos nuaí don ordú seo sa chomhrá.",
+    "isolated": "Níl achoimrí comhrá ar fáil fad is a ritheann breiseáin i bpróiseas ar leith (plugins.isolation: host): ní féidir an glaoiteoir a fhíorú ansin. Úsáid hermes duty nó an deais.",
     "dmHint": "Seol teachtaireacht phríobháideach chuig an mbota nó oscail an deais le haghaidh sonraí.",
     "error": "Níl clár na ndualgas ar fáil ({error}).",
     "stalled": "{age} (i bhfostú)",

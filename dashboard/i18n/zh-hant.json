@@ -134,6 +134,7 @@
     "ownerOnly": "此摘要僅供值班台擁有者查看。",
     "configureOwner": "請先在 duty-board/settings.json 中設定 owner，再在聊天中使用此指令。",
     "oldHost": "在聊天中使用此指令需要 Hermes 0.21.7 或更新版本。",
+    "isolated": "外掛在獨立程序中執行時（plugins.isolation: host）無法提供聊天摘要：在那裡無法確認是誰在呼叫。請使用 hermes duty 或儀表板。",
     "dmHint": "請私訊機器人或開啟儀表板查看詳情。",
     "error": "值班台暫時無法使用（{error}）。",
     "stalled": "{age}（停滯）",

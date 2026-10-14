@@ -17,6 +17,11 @@ try:
     board.get_hermes_home = get_hermes_home
 except ImportError:  # outside Hermes
     pass
+try:
+    from agent.secret_scope import get_secret
+    board.get_secret = get_secret
+except ImportError:  # outside Hermes, or a host without profile-scoped secrets
+    pass
 
 
 _LOCAL_SURFACES = frozenset({"", "cli", "tui", "desktop", "local"})
@@ -46,18 +51,29 @@ def _session_from_context(name: str):
 _session = _session_from_context
 
 
-def _private_destination(platform: str, chat_type: str, chat_id: str) -> bool:
-    """Whether the reply lands in a one-to-one conversation.
+# Platforms whose adapter reports chat_type "dm" only for a one-to-one chat,
+# checked in the host source (0.21.7 and 0.22.0): Discord (DMChannel; group DMs
+# are not DMChannel), Telegram ("private"), Feishu ("p2p"), Google Chat
+# (DIRECT_MESSAGE space), Mattermost (channel type "D"). Slack needs its D id.
+# Everything else, including Matrix (m.direct rooms can hold more people) and
+# platforms not reviewed yet, counts as shared: counts only by default.
+_ONE_TO_ONE_DM = frozenset({"discord", "telegram", "feishu", "google_chat", "mattermost"})
 
-    The host's ``chat_type == "dm"`` is not proof on every platform: Slack
-    reports group DMs (mpim) as "dm" too. Where the destination id tells
-    one-to-one apart, require it; Slack one-to-one IM channel ids start with D.
-    """
+
+def _private_destination(platform: str, chat_type: str, chat_id: str) -> bool:
+    """Whether the reply provably lands in a one-to-one conversation."""
     if chat_type != "dm":
         return False
     if platform == "slack":
         return chat_id.startswith("D")
-    return True
+    return platform in _ONE_TO_ONE_DM
+
+
+def _in_plugin_host() -> bool:
+    """True in a ``plugins.isolation: host`` child process. The host forwards a
+    command's arguments there but not the caller's session, so nothing in the
+    child can say who is asking or where the reply goes."""
+    return os.environ.get("HERMES_PLUGIN_HOST_PROCESS") == "1"
 
 
 def _in_gateway() -> bool:
@@ -100,10 +116,14 @@ def _error(locale, exc):
 def duty(raw_args: str = "") -> str:
     locale = "en"
     try:
+        if _in_plugin_host():
+            # Before reading anything: language and settings are not needed to refuse.
+            return message("en", "isolated")
         settings = board._settings()
-        locale = choose_locale(settings=settings)
+        home = board._home()
+        locale = choose_locale(settings=settings, home=home)
         mode, explicit = _arguments(raw_args)
-        locale = choose_locale(explicit, settings)
+        locale = choose_locale(explicit, settings, home)
         bound_platform = _session("HERMES_SESSION_PLATFORM")
         platform = (bound_platform or "").lower()
         user_id = _session("HERMES_SESSION_USER_ID") or ""
@@ -152,7 +172,7 @@ def cli_handler(args) -> None:
     locale = "en"
     try:
         settings = board._settings()
-        locale = choose_locale(args.lang, settings)
+        locale = choose_locale(args.lang, settings, board._home())
         data = board.cached_summary(settings=board._runtime_settings(settings))
         if args.json:
             print(json.dumps(data, ensure_ascii=False))

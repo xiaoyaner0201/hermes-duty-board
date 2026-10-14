@@ -139,6 +139,7 @@
     "ownerOnly": "Bu özet yalnızca panonun sahibine açıktır.",
     "configureOwner": "Bu komutu sohbette kullanmadan önce duty-board/settings.json içinde owner ayarlayın.",
     "oldHost": "Bu komutu sohbette kullanmak için Hermes 0.21.7 veya üzeri gerekir.",
+    "isolated": "Eklentiler ayrı bir süreçte çalışırken (plugins.isolation: host) sohbet özetleri kullanılamaz: orada çağıranın kim olduğu doğrulanamaz. hermes duty komutunu veya gösterge panelini kullanın.",
     "dmHint": "Ayrıntılar için bota özel mesaj gönderin veya gösterge panelini açın.",
     "error": "İzleme panosu kullanılamıyor ({error}).",
     "stalled": "{age} (takıldı)",

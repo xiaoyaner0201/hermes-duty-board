@@ -144,6 +144,7 @@
     "ownerOnly": "Este resumen solo está disponible para el propietario del panel.",
     "configureOwner": "Configura owner en duty-board/settings.json antes de usar este comando en el chat.",
     "oldHost": "Este comando necesita Hermes 0.21.7 o posterior en el chat.",
+    "isolated": "Los resúmenes en el chat no están disponibles mientras los plugins se ejecutan en un proceso aparte (plugins.isolation: host): allí no se puede verificar quién llama. Usa hermes duty o el panel.",
     "dmHint": "Envía un mensaje privado al bot o abre el panel para ver los detalles.",
     "error": "Panel no disponible ({error}).",
     "stalled": "{age} (estancado)",

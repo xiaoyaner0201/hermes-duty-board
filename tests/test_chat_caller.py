@@ -161,7 +161,7 @@ def test_cleared_context_is_local(duty, home, session_context):
     ("slack", "C0789", False),
     ("discord", "1234", True),       # Discord DMs: the host only says "dm" for DMChannel or no guild
     ("telegram", "1234", True),
-    ("matrix", "!room:x", True),
+    ("matrix", "!room:x", False),    # m.direct rooms can hold more than two people
 ])
 def test_dm_means_private_only_where_the_host_proves_it(duty, home, monkeypatch, session_context, platform, chat_id, private):
     """Some adapters label a shared conversation as "dm" (Slack groups im and
@@ -197,4 +197,72 @@ def test_routed_profile_decides_owner_and_data(duty, home, tmp_path, monkeypatch
     finally:
         session_context.clear_session_vars(tokens)
     assert "OWNERTITLE" not in result
+    assert "only available" in result
+
+
+@pytest.mark.parametrize("chat_id", ["!room:example.org", "!dm:example.org"])
+def test_matrix_dm_label_is_not_trusted(duty, home, monkeypatch, session_context, chat_id):
+    """Matrix calls a room "dm" from m.direct account data plus a missing room
+    name, even with three or more members. Nothing bound proves one-to-one."""
+    _settings(home, owner=OWNER)
+    _waiting(home)
+    _as_gateway_process(monkeypatch)
+    tokens = session_context.set_session_vars(platform="matrix", user_id=OWNER, chat_type="dm", chat_id=chat_id)
+    try:
+        result = duty()
+    finally:
+        session_context.clear_session_vars(tokens)
+    assert "OWNERTITLE" not in result
+    assert "1 waiting on you" in result
+
+
+@pytest.mark.parametrize("platform", ["telegram", "discord", "feishu", "weixin", "unknownplatform"])
+def test_dm_details_only_on_platforms_with_a_proven_one_to_one_label(duty, home, monkeypatch, session_context, platform):
+    _settings(home, owner=OWNER)
+    _waiting(home)
+    _as_gateway_process(monkeypatch)
+    tokens = session_context.set_session_vars(platform=platform, user_id=OWNER, chat_type="dm", chat_id="1")
+    try:
+        result = duty()
+    finally:
+        session_context.clear_session_vars(tokens)
+    assert ("OWNERTITLE" in result) is (platform in {"telegram", "discord", "feishu"})
+
+
+def test_plugin_host_child_refuses_chat_and_keeps_data(duty, home, monkeypatch):
+    """With plugins.isolation: host the command runs in a child process that
+    receives the arguments but none of the caller's session. It cannot tell
+    the owner from anyone else, or a DM from a channel, so it refuses."""
+    _settings(home, owner=OWNER)
+    _waiting(home)
+    monkeypatch.setenv("HERMES_PLUGIN_HOST_PROCESS", "1")
+    result = duty()
+    assert "OWNERTITLE" not in result
+    assert "plugins.isolation" in result
+
+
+def test_routed_profile_ignores_the_launch_profile_owner_variable(duty, home, tmp_path, monkeypatch, session_context):
+    """DUTY_BOARD_OWNER in the launch environment belongs to the launch profile.
+    A routed profile's own scoped value, or its settings, decide its owner."""
+    from tests.fixtures.make_home import make_home
+
+    _settings(home, owner=OWNER)
+    routed = make_home(tmp_path / "routed-owner")
+    (routed / "duty-board" / "settings.json").write_text(json.dumps({"owner": "999"}))
+    now = float((routed / "fixture-now").read_text())
+    add_session(routed, "routed", title="ROUTEDTITLE", now=now)
+    add_message(routed, "routed", "assistant", "May I continue?", timestamp=now - 300)
+    commands = sys.modules[duty.__module__]
+    monkeypatch.setattr(commands.board, "get_hermes_home", lambda: routed)
+    monkeypatch.setenv("DUTY_BOARD_OWNER", OWNER)
+    # The host's profile-scoped secret lookup: the routed profile has no
+    # DUTY_BOARD_OWNER of its own, so the scoped answer is "unset".
+    monkeypatch.setattr(commands.board, "get_secret", lambda name, default=None: default)
+    _as_gateway_process(monkeypatch)
+    tokens = session_context.set_session_vars(platform="discord", user_id=OWNER, chat_type="dm", chat_id="1")
+    try:
+        result = duty()
+    finally:
+        session_context.clear_session_vars(tokens)
+    assert "ROUTEDTITLE" not in result
     assert "only available" in result

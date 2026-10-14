@@ -144,6 +144,7 @@
     "ownerOnly": "Questo riepilogo è disponibile solo al proprietario del pannello.",
     "configureOwner": "Imposta owner in duty-board/settings.json prima di usare questo comando in chat.",
     "oldHost": "Questo comando richiede Hermes 0.21.7 o successivo in chat.",
+    "isolated": "I riepiloghi in chat non sono disponibili mentre i plugin girano in un processo separato (plugins.isolation: host): lì non si può verificare chi chiama. Usa hermes duty o il pannello.",
     "dmHint": "Scrivi al bot in privato o apri il pannello per i dettagli.",
     "error": "Pannello non disponibile ({error}).",
     "stalled": "{age} (bloccato)",
