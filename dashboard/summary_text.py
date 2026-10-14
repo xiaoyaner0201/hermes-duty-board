@@ -105,15 +105,27 @@ _MARKDOWN = re.compile(r"([\\`*_{}\[\]()<>#+.!|~\-])")
 _LINK = re.compile(r"https://discord\.com/channels/(?:[0-9]{1,25}|@me)/[0-9]{1,25}(?:/[0-9]{1,25})?")
 
 
-def safe_field(value, limit=70) -> str:
-    # Collapse line/terminal controls before escaping. Bound the *escaped*
-    # field without cutting an escape pair (which could re-enable Markdown).
+_ZWSP = "\u200b"
+
+
+def safe_field(value, limit=70, *, markdown=True) -> str:
+    """One chat-safe line from untrusted text.
+
+    Always: controls and newlines collapse to spaces, mentions get a zero-width
+    space after ``@`` (``@everyone``, ``<@1>``, ``<@&3>``), and the result is
+    clipped. With ``markdown`` (Discord, which renders the reply as written),
+    Markdown characters are backslash-escaped. Without it (Telegram, Slack,
+    Feishu adapters convert Markdown themselves; a terminal shows text as is),
+    a backslash would show up literally, so only link syntax is broken up.
+    """
     text = " ".join("".join(c if c.isprintable() else " " for c in str(value or "")).split())
-    text = text.replace("@", "@\u200b")
+    text = text.replace("@", "@" + _ZWSP)
+    if not markdown:
+        text = text.replace("](", "]" + _ZWSP + "(").replace("<", "‹").replace(">", "›")
     parts = []
     size = 0
     for char in text:
-        token = "\\" + char if _MARKDOWN.fullmatch(char) else char
+        token = "\\" + char if markdown and _MARKDOWN.fullmatch(char) else char
         if size + len(token) > limit - 1:
             return "".join(parts) + "…"
         parts.append(token)
@@ -142,8 +154,9 @@ def _item_line(item, section, locale, now, viewer):
         title = message(locale, "hidden")
         place = message(locale, "privatePlace")
     else:
-        title = safe_field(item.get("goal") or item.get("name") or item.get("title") or meta.get("title")) or message(locale, "untitled")
-        place = safe_field(meta.get("where"), 35) or safe_field(meta.get("source"), 25) or message(locale, "localPlace")
+        md = viewer.get("link_style") == "discord"
+        title = safe_field(item.get("goal") or item.get("name") or item.get("title") or meta.get("title"), markdown=md) or message(locale, "untitled")
+        place = safe_field(meta.get("where"), 35, markdown=md) or safe_field(meta.get("source"), 25, markdown=md) or message(locale, "localPlace")
     timestamp = next((item[k] for k in ("since", "started_at", "completed_at", "dispatched_at", "last_at", "activity_at") if item.get(k) is not None), now)
     age = duration(now - float(timestamp), locale)
     if section == "running" and item.get("stalled"):
@@ -185,10 +198,16 @@ def render_summary(data, *, locale, now, viewer) -> str:
         return "\n".join(lines)
 
     text = compose()
-    # Preserve all section headers/counts, dropping complete item lines rather
-    # than slicing Markdown/links or silently losing an entire later section.
-    while len(text) > MAX_CHARS and any(shown.values()):
-        key = max(shown, key=lambda k: shown[k])
-        shown[key] -= 1
-        text = compose()
+    # Over budget: drop whole item lines (never slice Markdown or a link), from the
+    # lowest-priority section first, keeping at least one line per section for as
+    # long as possible. What waits on the owner survives longest. Section headers
+    # and their "+N more" counts always stay.
+    trim_order = [key for key, _, _ in reversed(groups)]
+    for floor in (1, 0):
+        for key in trim_order:
+            while len(text) > MAX_CHARS and shown[key] > floor:
+                shown[key] -= 1
+                text = compose()
+            if len(text) <= MAX_CHARS:
+                return text
     return text

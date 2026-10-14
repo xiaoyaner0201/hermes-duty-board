@@ -24,10 +24,11 @@ def settings(home, **values):
     (home / "duty-board" / "settings.json").write_text(json.dumps(values))
 
 
-def caller(commands, monkeypatch, *, user=OWNER, platform="discord", chat_type="dm"):
+def caller(commands, monkeypatch, *, user=OWNER, platform="discord", chat_type="dm", bound=True):
+    """Simulate a call inside the gateway. ``bound=False`` is a host that binds nothing (before 0.21.7)."""
     values = {"HERMES_SESSION_PLATFORM": platform, "HERMES_SESSION_USER_ID": user, "HERMES_SESSION_CHAT_TYPE": chat_type}
-    monkeypatch.setattr(commands, "_session", lambda name: values.get(name, ""))
-    monkeypatch.setenv("_HERMES_GATEWAY", "1")
+    monkeypatch.setattr(commands, "_session", (lambda name: values.get(name, "")) if bound else (lambda name: None))
+    monkeypatch.setattr(commands, "_in_gateway", lambda: True)
 
 
 def waiting(home, sid="mine", title="OWNERTITLE"):
@@ -78,13 +79,22 @@ def test_local_summary_without_owner(commands, home, monkeypatch, platform):
     assert "OWNERTITLE" in commands.duty()
 
 
-@pytest.mark.parametrize("platform", ["", "cli", "tui"])
-def test_old_host_fails_closed(commands, home, monkeypatch, platform):
+def test_old_host_fails_closed(commands, home, monkeypatch):
     settings(home, owner=OWNER)
     reads = no_board_read(commands, monkeypatch)
-    caller(commands, monkeypatch, platform=platform, user="", chat_type="")
+    caller(commands, monkeypatch, bound=False)
     assert "0.21.7" in commands.duty()
     assert reads == []
+
+
+@pytest.mark.parametrize("platform", ["", "cli", "tui"])
+def test_local_surface_bound_inside_gateway_process_is_local(commands, home, monkeypatch, platform):
+    """A bound local surface (the TUI binds source=tui) is the local user even
+    if the process also looks like a gateway."""
+    settings(home, owner=OWNER)
+    waiting(home)
+    caller(commands, monkeypatch, platform=platform, user="", chat_type="")
+    assert "OWNERTITLE" in commands.duty()
 
 
 def test_missing_caller_id_refused(commands, home, monkeypatch):
@@ -348,3 +358,37 @@ def test_locale_priority(text, monkeypatch):
     assert text.locale_name("zz") == "en"
     assert text.duration(7800, "en") == "2h 10m"
     assert not re.search(r"\{\w+\}", render(text, sample_board()))
+
+
+@pytest.mark.parametrize("platform", ["telegram", "slack", "feishu", "cli"])
+def test_other_surfaces_get_no_backslash_escapes(text, platform):
+    """Telegram, Slack and Feishu adapters convert Markdown themselves, and a
+    terminal shows text as is, so pre-escaped characters arrive as literal
+    backslashes there. Only Discord gets backslash escapes; everywhere else
+    links and mentions are still broken up."""
+    data = sample_board()
+    data["conversations"]["waiting"][0]["title"] = "self-improving #ops [x](https://e.vil) @everyone <@U1>"
+    result = text.render_summary(data, locale="en", now=10000, viewer={"is_owner": True, "platform": platform, "link_style": "plain"})
+    line = next(line for line in result.splitlines() if "improving" in line)
+    assert "\\" not in line
+    assert "self-improving #ops" in line
+    assert "](" not in line
+    assert "@everyone" not in line
+    assert "<@U1>" not in line
+
+
+def test_budget_trims_low_priority_sections_first(text):
+    """When the message is over budget, what waits on the owner survives
+    longest; older background results and goals give way first."""
+    now = 100000
+    link = "https://discord.com/channels/111/222/333"
+    waiting = [{"title": f"WAIT{n}", "where": "place", "since": now - 60 * n, "link": link} for n in range(6)]
+    dropped = [{"goal": f"DROPPED{n} " + "x" * 90, "session": {"where": "y" * 40, "link": link}, "completed_at": now - 3600} for n in range(17)]
+    running = [{"title": f"RUN{n} " + "z" * 60, "where": "w" * 30, "started_at": now - 900, "link": link} for n in range(5)]
+    data = {"conversations": {"waiting": waiting, "unanswered": [], "running": running, "done": []},
+            "delegations": {"running": [], "dropped": dropped}, "cron": {"problems": []}, "goals": {"items": []}}
+    result = render(text, data)
+    assert len(result) <= 1900
+    for n in range(6):
+        assert f"WAIT{n}" in result
+    assert "+" in result  # something lower down was trimmed instead
