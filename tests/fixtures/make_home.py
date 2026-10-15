@@ -41,13 +41,28 @@ CREATE TABLE state_meta (key TEXT PRIMARY KEY, value TEXT);
 RELEASE_SCHEMA = Path(__file__).with_name("hermes-v0.22.0.sql")
 
 # Deliberately legacy collector shape, not an ALTER of an arbitrary release.
+# It mirrors the captured release table exactly except for the column that this
+# compatibility fixture is meant to exercise.
 LEGACY_DELEGATION_DDL = """
 CREATE TABLE async_delegations (
-    delegation_id TEXT PRIMARY KEY, origin_session TEXT NOT NULL,
-    parent_session_id TEXT, state TEXT NOT NULL,
+    delegation_id TEXT PRIMARY KEY,
+    origin_session TEXT NOT NULL,
+    origin_ui_session_id TEXT NOT NULL DEFAULT '',
+    parent_session_id TEXT,
+    state TEXT NOT NULL,
+    dispatched_at REAL NOT NULL,
+    completed_at REAL,
+    updated_at REAL NOT NULL,
+    event_json TEXT,
+    result_json TEXT,
     delivery_state TEXT NOT NULL DEFAULT 'pending',
-    dispatched_at REAL NOT NULL, completed_at REAL, updated_at REAL NOT NULL,
-    task_json TEXT, result_json TEXT
+    delivery_attempts INTEGER NOT NULL DEFAULT 0,
+    delivered_at REAL,
+    owner_pid INTEGER,
+    owner_started_at INTEGER,
+    task_json TEXT,
+    delivery_claim TEXT,
+    delivery_claimed_at REAL
 );
 """
 

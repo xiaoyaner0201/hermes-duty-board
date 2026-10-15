@@ -54,8 +54,10 @@ def test_legacy_delegation_shape_is_explicit_and_isolated(home):
     try:
         use_legacy_delegations(conn)
         columns = {row[1] for row in conn.execute("PRAGMA table_info(async_delegations)")}
-        assert "origin_session_id" not in columns
-        assert {"origin_session", "parent_session_id", "task_json", "result_json"} <= columns
+        with sqlite3.connect(":memory:") as release_conn:
+            release_conn.executescript(RELEASE_SCHEMA.read_text(encoding="utf-8"))
+            release_columns = {row[1] for row in release_conn.execute("PRAGMA table_info(async_delegations)")}
+        assert columns == release_columns - {"origin_session_id"}
         assert conn.execute("SELECT id FROM sessions").fetchone()[0] == "preserved"
     finally:
         conn.close()
