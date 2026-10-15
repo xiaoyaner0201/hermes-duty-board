@@ -26,6 +26,46 @@ node tests/js/runtime_check.mjs
 
 To see the UI, use the harness in `dev/` (see `dev/README.md`). It renders the tab against a synthetic Hermes home, so no real data is involved.
 
+## Release-schema compatibility
+
+Ordinary `python -m pytest -q` now builds synthetic homes from
+`tests/fixtures/hermes-v0.22.0.sql`. This runs the existing privacy, authorization,
+summary-budget and read-only assertions against release constraints without
+installing or importing Hermes, accessing credentials, or making network calls.
+`tests/test_release_schema.py` also proves that omitting a delegation origin and
+reusing a nonempty session title are rejected. The legacy delegation test replaces
+only its synthetic delegation table with explicit DDL lacking `origin_session_id`;
+it does not try to drop a column from arbitrary release SQL.
+
+The SQL was captured from a fresh real `hermes_state.SessionDB` in Hermes Agent
+[v0.22.0](https://github.com/NousResearch/hermes-agent/releases/tag/v0.22.0), commit
+[`e06df9c2eae6901f4c88f464e0ae6e753c0428b8`](https://github.com/NousResearch/hermes-agent/tree/e06df9c2eae6901f4c88f464e0ae6e753c0428b8).
+`capture_release_schema.py` constructs a temporary fictional home with `make_home`,
+sets `HERMES_HOME` before importing Hermes, replaces only that temporary DB with
+SessionDB, closes it, then reads `sqlite_schema`. It preserves the SQL for the five
+collector-facing tables, the referenced `system_prompts` table, and their explicit
+indexes verbatim in deterministic order. It captures no rows, unrelated tables,
+FTS objects or triggers; it is a collector-schema snapshot, not a full runtime DB.
+Substantial SQL retains Nous Research's MIT notice in
+`tests/fixtures/hermes-schema-LICENSE.txt`.
+
+To independently check or recapture, supply a separately prepared interpreter and
+read-only source archive at that exact commit (do not use a live Hermes home):
+
+```bash
+PYTHONPATH="$NETWORK_GUARD:$PWD:$RELEASE_SOURCE" "$RELEASE_PYTHON" -m tests.fixtures.capture_release_schema --check tests/fixtures/hermes-v0.22.0.sql
+PYTHONPATH="$NETWORK_GUARD:$PWD:$RELEASE_SOURCE" "$RELEASE_PYTHON" -m tests.fixtures.capture_release_schema > schema-capture.sql
+```
+
+Run these under a bounded subprocess, with `HOME` and `HERMES_HOME` routed to
+synthetic temporary directories and a credential-free environment.
+`NETWORK_GUARD` must contain a `sitecustomize.py` that blocks outbound sockets and
+is inherited by Python subprocesses. Ordinary pytest additionally installs the
+suite's offline guard. Review capture output before replacing the committed SQL;
+never infer a release schema by editing the simplified DDL. The optional
+`make_home(..., schema="simplified")` fixture and `SESSION_DDL` remain available for
+deliberate reduced-schema tests, separate from the default release snapshot.
+
 ## Pull requests
 
 - Keep each PR to one change and use [Conventional Commits](https://www.conventionalcommits.org/) titles (`feat:`, `fix:`, `docs:`, ...).
